@@ -78,23 +78,14 @@ impl Rule for DebugLeak {
         items.visit_file(&file.ast);
 
         let mut out = Vec::new();
-        for s in &items.structs {
-            if let Some(span) = derives_debug(&s.attrs) {
-                let leaks = leaking_fields(classify_name(&s.ident.to_string()), &s.fields);
-                out.extend(derive_finding(file, span, &s.ident, leaks));
-            }
-        }
-        for e in &items.enums {
-            if let Some(span) = derives_debug(&e.attrs) {
-                let enum_strength = classify_name(&e.ident.to_string());
-                let mut leaks = Vec::new();
-                for v in &e.variants {
-                    let strength = enum_strength.max(classify_name(&v.ident.to_string()));
-                    for (label, conf) in leaking_fields(strength, &v.fields) {
-                        leaks.push((format!("{}::{label}", v.ident), conf));
-                    }
-                }
-                out.extend(derive_finding(file, span, &e.ident, leaks));
+        for hit in derive_hits(&items, "Debug", skipped_by_attr) {
+            let message = format!(
+                "`#[derive(Debug)]` on `{}` prints secret {}",
+                hit.ty,
+                hit.fields_phrase()
+            );
+            if let Some(confidence) = hit.confidence() {
+                out.push(file.finding(&META, confidence, hit.span, message, HELP_DERIVE));
             }
         }
 
@@ -112,10 +103,10 @@ impl Rule for DebugLeak {
 }
 
 #[derive(Default)]
-struct Items<'ast> {
-    structs: Vec<&'ast ItemStruct>,
-    enums: Vec<&'ast ItemEnum>,
-    impls: Vec<&'ast ItemImpl>,
+pub(super) struct Items<'ast> {
+    pub structs: Vec<&'ast ItemStruct>,
+    pub enums: Vec<&'ast ItemEnum>,
+    pub impls: Vec<&'ast ItemImpl>,
 }
 
 impl<'ast> Visit<'ast> for Items<'ast> {
@@ -133,32 +124,84 @@ impl<'ast> Visit<'ast> for Items<'ast> {
     }
 }
 
-fn derive_finding(
-    file: &ParsedFile,
-    span: Span,
-    ty: &Ident,
-    leaks: Vec<(String, Confidence)>,
-) -> Option<Finding> {
-    let confidence = leaks.iter().map(|(_, c)| *c).max()?;
-    let fields = leaks
-        .iter()
-        .map(|(l, _)| format!("`{l}`"))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let noun = if leaks.len() == 1 { "field" } else { "fields" };
-    let message = format!("`#[derive(Debug)]` on `{ty}` prints secret {noun} {fields}");
-    Some(file.finding(&META, confidence, span, message, HELP_DERIVE))
+/// A struct or enum that derives a given trait and has secret-bearing fields.
+pub(super) struct DeriveHit {
+    /// Span of the trait name inside `#[derive(..)]`.
+    pub span: Span,
+    pub ty: String,
+    /// `(field label, confidence)`. Enum fields are labelled `Variant::field`.
+    pub leaks: Vec<(String, Confidence)>,
 }
 
-/// Returns the span of `Debug` in `#[derive(.., Debug)]` or
-/// `#[cfg_attr(.., derive(.., Debug))]`.
-fn derives_debug(attrs: &[Attribute]) -> Option<Span> {
-    fn find_debug(paths: &Punctuated<Path, Token![,]>) -> Option<Span> {
+impl DeriveHit {
+    pub fn confidence(&self) -> Option<Confidence> {
+        self.leaks.iter().map(|(_, c)| *c).max()
+    }
+
+    /// "field `key`" or "fields `a`, `b`".
+    pub fn fields_phrase(&self) -> String {
+        let fields = self
+            .leaks
+            .iter()
+            .map(|(l, _)| format!("`{l}`"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let noun = if self.leaks.len() == 1 {
+            "field"
+        } else {
+            "fields"
+        };
+        format!("{noun} {fields}")
+    }
+}
+
+/// Finds types that `#[derive(<derive>)]` and have at least one secret-bearing
+/// field. `skip` says which fields the derive ignores.
+pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool) -> Vec<DeriveHit> {
+    let mut out = Vec::new();
+    for s in &items.structs {
+        if let Some(span) = derive_span(&s.attrs, derive) {
+            let leaks = leaking_fields(classify_name(&s.ident.to_string()), &s.fields, skip);
+            if !leaks.is_empty() {
+                out.push(DeriveHit {
+                    span,
+                    ty: s.ident.to_string(),
+                    leaks,
+                });
+            }
+        }
+    }
+    for e in &items.enums {
+        if let Some(span) = derive_span(&e.attrs, derive) {
+            let enum_strength = classify_name(&e.ident.to_string());
+            let mut leaks = Vec::new();
+            for v in &e.variants {
+                let strength = enum_strength.max(classify_name(&v.ident.to_string()));
+                for (label, conf) in leaking_fields(strength, &v.fields, skip) {
+                    leaks.push((format!("{}::{label}", v.ident), conf));
+                }
+            }
+            if !leaks.is_empty() {
+                out.push(DeriveHit {
+                    span,
+                    ty: e.ident.to_string(),
+                    leaks,
+                });
+            }
+        }
+    }
+    out
+}
+
+/// Returns the span of `name` in `#[derive(.., name)]` or
+/// `#[cfg_attr(.., derive(.., name))]`.
+pub(super) fn derive_span(attrs: &[Attribute], name: &str) -> Option<Span> {
+    let find_debug = |paths: &Punctuated<Path, Token![,]>| -> Option<Span> {
         paths.iter().find_map(|p| {
             let last = p.segments.last()?;
-            (last.ident == "Debug").then(|| last.ident.span())
+            (last.ident == name).then(|| last.ident.span())
         })
-    }
+    };
     for attr in attrs {
         if attr.path().is_ident("derive") {
             if let Ok(paths) = attr.parse_args_with(Punctuated::parse_terminated) {
@@ -187,12 +230,16 @@ fn derives_debug(attrs: &[Attribute]) -> Option<Span> {
     None
 }
 
-fn leaking_fields(owner: Option<Strength>, fields: &Fields) -> Vec<(String, Confidence)> {
+pub(super) fn leaking_fields(
+    owner: Option<Strength>,
+    fields: &Fields,
+    skip: fn(&Field) -> bool,
+) -> Vec<(String, Confidence)> {
     let owner = fallback_owner(owner, fields);
     fields
         .iter()
         .enumerate()
-        .filter(|(_, f)| !skipped_by_attr(f))
+        .filter(|(_, f)| !skip(f))
         .filter_map(|(i, f)| {
             let label = f.ident.as_ref().map_or(i.to_string(), ToString::to_string);
             field_confidence(owner, f.ident.as_ref(), &f.ty).map(|c| (label, c))
@@ -203,7 +250,7 @@ fn leaking_fields(owner: Option<Strength>, fields: &Fields) -> Vec<(String, Conf
 /// The owner's name only speaks for neutral fields when no field is secret by
 /// its own name: `SecretKey { inner }` leaks `inner`, but in
 /// `Credentials { username, password }` only `password` is the secret.
-fn fallback_owner(owner: Option<Strength>, fields: &Fields) -> Option<Strength> {
+pub(super) fn fallback_owner(owner: Option<Strength>, fields: &Fields) -> Option<Strength> {
     let named_secret = fields
         .iter()
         .filter_map(|f| f.ident.as_ref())
@@ -354,7 +401,10 @@ fn check_manual_impl(
     out
 }
 
-fn find_field<'a>(def: &'a ItemStruct, member: &Member) -> Option<(Option<&'a Ident>, &'a Field)> {
+pub(super) fn find_field<'a>(
+    def: &'a ItemStruct,
+    member: &Member,
+) -> Option<(Option<&'a Ident>, &'a Field)> {
     match member {
         Member::Named(name) => def
             .fields

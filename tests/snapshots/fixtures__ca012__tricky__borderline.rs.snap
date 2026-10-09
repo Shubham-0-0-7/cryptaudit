@@ -1,0 +1,6 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:10 CA012 [high/high] `#[derive(Serialize)]` on `Config` serialises secret field `api_key`
+11:10 CA012 [high/low] `#[derive(Serialize)]` on `Entry` serialises secret field `key`
