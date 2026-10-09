@@ -2,11 +2,11 @@
 
 Static analysis for cryptographic API misuse in Rust code.
 
-> **Status: early development.** The CLI is a scaffold and no rules are implemented yet. This README describes what the tool is being built to do.
+> **Status: early development.** One rule is implemented (CA010). More are planned; see the [roadmap](#roadmap).
 
-Modern ciphers like ChaCha20-Poly1305 and AES-GCM are sound. Real systems still break because the API is used wrongly: a reused nonce, a hardcoded key, a tag compared with `==`, a secret printed through `#[derive(Debug)]`. `cryptaudit` looks for these mistakes in your source and `Cargo.toml`, on every build.
+Modern ciphers like ChaCha20-Poly1305 and AES-GCM are sound. Real systems still break because the API is used wrongly: a reused nonce, a hardcoded key, a tag compared with `==`, a secret printed through `#[derive(Debug)]`. `cryptaudit` looks for these mistakes in your source code.
 
-## Usage
+## Install and run
 
 ```sh
 cargo install cryptaudit
@@ -14,16 +14,40 @@ cd your-project
 cargo cryptaudit
 ```
 
-## What it will detect
+It parses source files only. It does not build your project or touch the network.
 
-Rules are grouped by what the analysis needs:
+```
+high[CA010]: `impl Debug for SecretKey` formats secret `self.0.to_bytes()`
+  --> src/elliptic/secp256k1.rs:50:43
+   |
+50 |         f.debug_tuple("SecretKey").field(&bytes).finish()
+   |                                           ^^^^^
+   = confidence: high
+   = help: print a placeholder such as "[redacted]" instead of the secret
 
-| Surface | Examples |
+1 finding in 15 files
+```
+
+### Options
+
+| Flag | Meaning |
 |---|---|
-| Source (AST) | `#[derive(Debug/Serialize/Copy)]` on secret types, nonce reuse, hardcoded keys/IVs, `==` on MAC output, `.unwrap()` on decrypt results, non-CSPRNG key generation, disabled TLS verification |
-| Manifest | feature flags that disable constant-time backends, raw cipher crates with no AEAD, crypto crates with known advisories |
+| `--format human\|json` | Output format (default `human`) |
+| `--min-confidence low\|medium\|high` | Hide less certain findings (default `medium`) |
+| `--fail-on low\|medium\|high\|critical` | Exit with status 1 if a shown finding is at least this severe |
+| `--include-tests` | Also scan `tests/`, `benches/`, `examples/` and `#[cfg(test)]` code |
+| `--explain CA010` | Print the documentation for a rule |
+| `--list-rules` | List the rules |
 
-Many of these are specific to Rust: derive macros that leak secrets, `Copy` types that cannot be zeroized, and zeroing code that the optimiser removes. Each finding carries a severity and a confidence level, and low-confidence findings are hidden by default to keep the first run quiet.
+Exit status: `0` no findings, `1` findings, `2` the tool failed. Files that don't parse are reported as warnings and skipped. `target/` and anything in `.gitignore` is skipped.
+
+## Rules
+
+| ID | Name | Severity | What it finds |
+|---|---|---|---|
+| CA010 | secret-in-debug | high | `#[derive(Debug)]` on a struct with secret fields, and hand-written `Debug`/`Display` impls that print a secret, including through a local variable |
+
+Each finding has a severity (impact if exploited) and a confidence (how likely it is a true positive). Low-confidence findings are hidden by default, so the first run stays quiet. The rule list is based on a [taxonomy of Rust crypto misuse](docs/taxonomy.md); many patterns in it are specific to Rust, such as derive macros that leak secrets, `Copy` types that cannot be zeroized, and zeroing code that the optimiser removes.
 
 ## How it differs from existing tools
 
@@ -33,15 +57,14 @@ Many of these are specific to Rust: derive macros that leak secrets, `Copy` type
 
 ## Roadmap
 
-- [ ] CLI scaffold and `syn`-based visitor
-- [ ] First AST rules (derive leaks, `==` on tags, hardcoded keys)
-- [ ] Nonce reuse detection
+- [x] CLI, `syn`-based scanner, human and JSON output
+- [x] CA010: secrets printed by `Debug`/`Display`
+- [ ] `==` on MAC or digest output
+- [ ] Hardcoded keys and IVs, nonce reuse
+- [ ] Missing zeroization, `.unwrap()` on decrypt results
 - [ ] `Cargo.toml` analysis
+- [ ] SARIF output, config file, inline suppression
 - [ ] Evaluation on a labelled corpus and on real crates
-
-## Background
-
-The project proposal is in [docs/PROPOSAL.md](docs/PROPOSAL.md).
 
 ## Authors
 

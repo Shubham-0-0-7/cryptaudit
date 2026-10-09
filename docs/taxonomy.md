@@ -1,7 +1,7 @@
 # Rust Cryptographic Misuse Taxonomy
 
 Companion artifact to `cargo-cryptaudit`.
-Team: Shubham Chhatbar, Rahul Paul · Supervisor: Prof. Abhishek Kesarwani · IIIT Vadodara
+Team: Shubham Chhatbar, Rahul Paul
 
 ---
 
