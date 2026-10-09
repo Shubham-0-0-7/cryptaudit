@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+6:17 CA011 [medium/low] `#[derive(Copy)]` on `Cursor`: every move silently duplicates secret field `token`, and `Drop` (so `ZeroizeOnDrop`) is impossible

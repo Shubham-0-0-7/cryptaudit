@@ -2,6 +2,7 @@ use crate::finding::{Finding, Severity};
 use crate::source::ParsedFile;
 
 mod ca010;
+mod derives;
 
 pub struct RuleMeta {
     pub id: &'static str,
@@ -17,7 +18,12 @@ pub trait Rule: Sync {
 }
 
 pub fn all() -> Vec<Box<dyn Rule>> {
-    vec![Box::new(ca010::DebugLeak)]
+    vec![
+        Box::new(ca010::DebugLeak),
+        Box::new(derives::copy_rule()),
+        Box::new(derives::serialize_rule()),
+        Box::new(derives::eq_rule()),
+    ]
 }
 
 pub fn find(id: &str) -> Option<Box<dyn Rule>> {

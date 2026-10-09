@@ -1,0 +1,7 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+2:6 CA013 [medium/medium] `impl PartialEq for RemotePrivateKey` compares secret data with `==` instead of a constant-time comparison
+9:6 CA013 [medium/low] `impl PartialEq for Token` compares secret data with `==` instead of a constant-time comparison
+16:10 CA013 [medium/low] `#[derive(PartialEq)]` on `Entry` compares secret field `key` with early-exit equality

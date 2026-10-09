@@ -1,0 +1,8 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+1:17 CA011 [medium/high] `#[derive(Copy)]` on `SessionKey`: every move silently duplicates secret field `0`, and `Drop` (so `ZeroizeOnDrop`) is impossible
+4:17 CA011 [medium/high] `#[derive(Copy)]` on `Seed`: every move silently duplicates secret field `seed`, and `Drop` (so `ZeroizeOnDrop`) is impossible
+9:10 CA011 [medium/high] `#[derive(Copy)]` on `SigningKey`: every move silently duplicates secret field `bytes`, and `Drop` (so `ZeroizeOnDrop`) is impossible
+15:17 CA011 [medium/high] `#[derive(Copy)]` on `Material`: every move silently duplicates secret field `Raw::master_key`, and `Drop` (so `ZeroizeOnDrop`) is impossible

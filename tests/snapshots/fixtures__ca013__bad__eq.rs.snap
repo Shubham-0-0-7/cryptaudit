@@ -1,0 +1,9 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+1:10 CA013 [medium/high] `#[derive(PartialEq)]` on `SessionKey` compares secret field `0` with early-exit equality
+4:17 CA013 [medium/high] `#[derive(PartialEq)]` on `Credentials` compares secret field `password` with early-exit equality
+10:10 CA013 [medium/high] `#[derive(PartialEq)]` on `MacTag` compares secret field `secret_key` with early-exit equality
+18:6 CA013 [medium/high] `impl PartialEq for SecretKey` compares secret data with `==` instead of a constant-time comparison
+28:6 CA013 [medium/high] `impl PartialEq for ApiToken` compares secret data with `==` instead of a constant-time comparison
