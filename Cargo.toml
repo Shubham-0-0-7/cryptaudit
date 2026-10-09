@@ -6,6 +6,7 @@ authors = ["Shubham Chhatbar", "Rahul Paul"]
 description = "Static analysis for cryptographic API misuse in Rust code (cargo subcommand: cargo cryptaudit)"
 license = "Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/Shubham-0-0-7/cryptaudit"
 keywords = ["cryptography", "security", "static-analysis", "audit", "lint"]
 categories = ["development-tools::cargo-plugins", "cryptography"]
 
