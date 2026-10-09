@@ -1,0 +1,13 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:10 CA010 [high/high] `#[derive(Debug)]` on `Session` prints secret field `key`
+9:17 CA010 [high/high] `#[derive(Debug)]` on `Credentials` prints secret field `password`
+16:10 CA010 [high/high] `#[derive(Debug)]` on `SecretKey` prints secret field `0`
+19:10 CA010 [high/high] `#[derive(Debug)]` on `Cipher` prints secret field `key`
+24:20 CA010 [high/high] `#[derive(Debug)]` on `ApiClient` prints secret field `api_key`
+30:10 CA010 [high/high] `#[derive(Debug)]` on `Auth` prints secret field `Basic::password`
+37:38 CA010 [high/high] `#[derive(Debug)]` on `Wallet` prints secret field `seed`
+42:10 CA010 [high/high] `#[derive(Debug)]` on `DerivedKeys` prints secret fields `enc_key`, `mac_key`
+49:10 CA010 [high/high] `#[derive(Debug)]` on `PrivateKey` prints secret field `inner`

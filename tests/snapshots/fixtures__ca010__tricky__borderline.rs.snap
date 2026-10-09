@@ -1,0 +1,10 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+5:10 CA010 [high/low] `#[derive(Debug)]` on `Entry` prints secret field `key`
+12:10 CA010 [high/low] `#[derive(Debug)]` on `Token` prints secret field `text`
+26:10 CA010 [high/low] `#[derive(Debug)]` on `Identity` prints secret field `signing_key`
+61:43 CA010 [high/medium] `impl Debug for RemoteConfig` formats secret `self.client_secret`
+67:10 CA010 [high/high] `#[derive(Debug)]` on `FuzzInput` prints secret field `password`
+74:10 CA010 [high/high] `#[derive(Debug)]` on `LoginCredentials` prints secret field `password`

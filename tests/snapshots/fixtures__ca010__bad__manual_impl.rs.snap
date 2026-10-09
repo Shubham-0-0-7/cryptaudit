@@ -1,0 +1,11 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+16:38 CA010 [high/high] `impl Debug for SecretKey` formats secret `self.serialize()`
+29:36 CA010 [high/high] `impl Debug for Session` formats secret `self.session_key`
+40:32 CA010 [high/high] `impl Display for Token` formats secret `self.access_token`
+48:34 CA010 [high/high] `impl Debug for HmacKey` formats secret `self.0`
+58:26 CA010 [high/high] `impl Debug for Signer` formats secret `self.signing_key`
+69:50 CA010 [high/high] `impl Debug for WrappedSecretKey` formats secret `self.0.to_bytes()`
+81:34 CA010 [high/high] `impl Debug for Vault` formats secret `self.master_key.as_bytes()`
