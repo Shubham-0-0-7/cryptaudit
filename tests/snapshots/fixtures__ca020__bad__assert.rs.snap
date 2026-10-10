@@ -1,0 +1,7 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+2:5 CA020 [medium/high] `assert_eq!` on a MAC or tag: not constant time, and the panic message prints both values
+6:5 CA020 [medium/medium] `assert_ne!` on a MAC or tag: not constant time, and the panic message prints both values
+10:5 CA020 [medium/high] `debug_assert_eq!` on a MAC or tag: not constant time, and the panic message prints both values

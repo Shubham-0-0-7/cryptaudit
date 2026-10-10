@@ -186,6 +186,9 @@ pub enum TypeClass {
     Str,
     /// Integers, e.g. an RNG seed.
     Int,
+    /// `&'static str`, `&'static [u8]`: fixed at compile time, so a label or a
+    /// domain-separation constant, not a runtime secret.
+    Static,
     /// Anything else. Whether it leaks depends on that type's own `Debug`.
     Opaque(String),
 }
@@ -225,7 +228,13 @@ pub fn classify_type(ty: &Type) -> TypeClass {
             TypeClass::Int => TypeClass::Bytes,
             other => other,
         },
-        Type::Reference(r) => classify_type(&r.elem),
+        Type::Reference(r) => {
+            if r.lifetime.as_ref().is_some_and(|l| l.ident == "static") {
+                TypeClass::Static
+            } else {
+                classify_type(&r.elem)
+            }
+        }
         Type::Group(g) => classify_type(&g.elem),
         Type::Paren(p) => classify_type(&p.elem),
         Type::Path(p) => {
@@ -333,7 +342,10 @@ mod tests {
         assert_eq!(class("aead::Key<Aes256Gcm>"), TypeClass::Bytes);
         assert_eq!(class("[u32; 8]"), TypeClass::Bytes);
         assert_eq!(class("String"), TypeClass::Str);
-        assert_eq!(class("&'static str"), TypeClass::Str);
+        assert_eq!(class("&'static str"), TypeClass::Static);
+        assert_eq!(class("&'static [u8]"), TypeClass::Static);
+        assert_eq!(class("&'a str"), TypeClass::Str);
+        assert_eq!(class("Option<&'static str>"), TypeClass::Static);
         assert_eq!(class("u64"), TypeClass::Int);
         assert_eq!(class("SecretBox<[u8; 32]>"), TypeClass::Redacting);
         assert_eq!(class("secrecy::SecretString"), TypeClass::Redacting);

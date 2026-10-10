@@ -1,0 +1,6 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+8:13 CA019 [high/low] result of `verify(..)` is discarded (bare statement): a failed check is silently ignored
+20:18 CA019 [high/low] result of `decrypt(..)` is discarded (bare statement): a failed check is silently ignored

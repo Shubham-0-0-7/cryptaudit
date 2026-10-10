@@ -1,6 +1,6 @@
 [package]
 name = "cryptaudit"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 authors = ["Shubham Chhatbar", "Rahul Paul"]
 description = "Static analysis for cryptographic API misuse in Rust code (cargo subcommand: cargo cryptaudit)"

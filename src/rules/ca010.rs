@@ -280,7 +280,7 @@ fn field_confidence(
     use TypeClass::{Bytes, Int, Opaque, Redacting, Str};
 
     let class = classify_type(ty);
-    if class == Redacting {
+    if class == Redacting || class == TypeClass::Static {
         return None;
     }
     let by_name = match name {
@@ -298,7 +298,7 @@ fn field_confidence(
         (Some(Weak), Bytes) => Some(High),
         (Some(Weak), Str | Int) => Some(Low),
         (Some(_), Opaque(_)) => Some(Low),
-        (Some(_), Redacting) => None,
+        (Some(_), Redacting | TypeClass::Static) => None,
         (None, _) => match (owner, &class) {
             (Some(Strong), Bytes) => Some(High),
             (Some(Strong), Str | Int) => Some(Medium),

@@ -2,7 +2,7 @@
 
 Static analysis for cryptographic API misuse in Rust code.
 
-> **Status: early development.** Four rules are implemented (CA010 to CA013). More are planned; see the [roadmap](#roadmap).
+> **Status: early development.** Eight rules are implemented. More are planned; see the [roadmap](#roadmap).
 
 Modern ciphers like ChaCha20-Poly1305 and AES-GCM are sound. Real systems still break because the API is used wrongly: a reused nonce, a hardcoded key, a tag compared with `==`, a secret printed through `#[derive(Debug)]`. `cryptaudit` looks for these mistakes in your source code.
 
@@ -57,10 +57,16 @@ Exit status: `0` no findings, `1` findings, `2` the tool failed. Files that don'
 | CA011 | copy-on-secret | medium | `#[derive(Copy)]` on a secret type: every move duplicates the key, and `ZeroizeOnDrop` becomes impossible |
 | CA012 | serialize-on-secret | high | `#[derive(Serialize)]` on a secret type, unless the field has `#[serde(skip)]` or custom serialisation |
 | CA013 | partialeq-on-secret | medium | `#[derive(PartialEq)]` or a hand-written `==` on a secret type, instead of a constant-time comparison |
+| CA018 | unwrap-on-crypto-result | medium | `.unwrap()` / `.expect()` on `decrypt`, `verify_slice` and similar: tampered input panics the process |
+| CA019 | verification-result-discarded | high | `let _ = mac.verify_slice(..)`, a bare `decrypt_in_place(..);`, or `.ok();`: a failed check is silently ignored |
+| CA020 | assert-eq-on-mac | medium | `assert_eq!` / `assert_ne!` on a MAC or tag: not constant time, and the panic prints both values |
+| CA021 | mac-compared-with-eq | high | `==` / `!=` on MAC or digest output, including a MAC stored in a local variable first |
 
 Run `cargo cryptaudit --explain CA013` for the full description of a rule, with examples and known false positives.
 
 Each finding has a severity (impact if exploited) and a confidence (how likely it is a true positive). Low-confidence findings are hidden by default, so the first run stays quiet. The rule list is based on a [taxonomy of Rust crypto misuse](docs/taxonomy.md); many patterns in it are specific to Rust, such as derive macros that leak secrets, `Copy` types that cannot be zeroized, and zeroing code that the optimiser removes.
+
+Evaluation on real crates, with every finding labelled true or false positive, is in [eval/triage.md](eval/triage.md).
 
 ## How it differs from existing tools
 
@@ -73,7 +79,8 @@ Each finding has a severity (impact if exploited) and a confidence (how likely i
 - [x] CLI, `syn`-based scanner, human and JSON output
 - [x] CA010: secrets printed by `Debug`/`Display`
 - [x] CA011, CA012, CA013: `Copy`, `Serialize` and `PartialEq` on secret types
-- [ ] `==` on MAC or digest output
+- [x] CA018, CA019: `unwrap` on, and discarding, decrypt/verify results
+- [x] CA020, CA021: MAC and tag comparisons
 - [ ] Hardcoded keys and IVs, nonce reuse
 - [ ] Missing zeroization, `.unwrap()` on decrypt results
 - [ ] `Cargo.toml` analysis
