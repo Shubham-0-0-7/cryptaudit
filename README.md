@@ -14,7 +14,7 @@ cd your-project
 cargo cryptaudit
 ```
 
-It parses source files only. It does not build your project or touch the network.
+Requires Rust 1.85 or newer. It parses source files only: it does not build your project or touch the network.
 
 ```
 medium[CA013]: `impl PartialEq for SecretKey` compares secret data with `==` instead of a constant-time comparison
@@ -82,10 +82,11 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 - [x] CA018, CA019: `unwrap` on, and discarding, decrypt/verify results
 - [x] CA020, CA021: MAC and tag comparisons
 - [ ] Hardcoded keys and IVs, nonce reuse
-- [ ] Missing zeroization, `.unwrap()` on decrypt results
+- [ ] Missing or optimiser-elided zeroization
 - [ ] `Cargo.toml` analysis
 - [ ] SARIF output, config file, inline suppression
-- [ ] Evaluation on a labelled corpus and on real crates
+- [x] First evaluation on real crates ([eval/triage.md](eval/triage.md))
+- [ ] Blind evaluation on unseen crates, and a labelled corpus with precision and recall per rule
 
 ## Authors
 
