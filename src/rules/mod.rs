@@ -2,7 +2,9 @@ use crate::finding::{Finding, Severity};
 use crate::source::ParsedFile;
 
 mod ca010;
+mod compare;
 mod derives;
+mod results;
 
 pub struct RuleMeta {
     pub id: &'static str,
@@ -23,6 +25,10 @@ pub fn all() -> Vec<Box<dyn Rule>> {
         Box::new(derives::copy_rule()),
         Box::new(derives::serialize_rule()),
         Box::new(derives::eq_rule()),
+        Box::new(compare::MacEq),
+        Box::new(compare::MacAssert),
+        Box::new(results::UnwrapOnCrypto),
+        Box::new(results::DiscardedVerify),
     ]
 }
 

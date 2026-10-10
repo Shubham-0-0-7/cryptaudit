@@ -1,0 +1,10 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+2:17 CA019 [high/high] result of `verify_slice(..)` is discarded (`let _ =`): a failed check is silently ignored
+6:12 CA019 [high/high] result of `decrypt_in_place(..)` is discarded (bare statement): a failed check is silently ignored
+10:9 CA019 [high/high] result of `verify_slice(..)` is discarded (`.ok()`, bare statement): a failed check is silently ignored
+14:12 CA019 [high/high] result of `verify_strict(..)` is discarded (`_ =`): a failed check is silently ignored
+18:39 CA019 [high/high] result of `verify_slice(..)` is discarded (`let _ =`): a failed check is silently ignored
+22:20 CA019 [high/medium] result of `decrypt(..)` is discarded (`let _ =`): a failed check is silently ignored

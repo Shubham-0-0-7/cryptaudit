@@ -1,0 +1,7 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:9 CA021 [high/low] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+8:9 CA021 [high/medium] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+19:9 CA021 [high/medium] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte

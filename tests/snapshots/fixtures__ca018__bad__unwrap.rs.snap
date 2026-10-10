@@ -1,0 +1,9 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:31 CA018 [medium/medium] `.unwrap()` on `decrypt(..)`: an authentication failure is expected input, and here it panics
+8:31 CA018 [medium/medium] `.expect()` on `decrypt(..)`: an authentication failure is expected input, and here it panics
+12:46 CA018 [medium/high] `.unwrap()` on `decrypt_in_place(..)`: an authentication failure is expected input, and here it panics
+16:27 CA018 [medium/high] `.unwrap()` on `verify_slice(..)`: an authentication failure is expected input, and here it panics
+20:32 CA018 [medium/high] `.expect()` on `verify_strict(..)`: an authentication failure is expected input, and here it panics

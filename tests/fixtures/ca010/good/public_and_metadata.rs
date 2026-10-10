@@ -38,3 +38,19 @@ mod tests {
         secret_key: [u8; 32],
     }
 }
+
+// Domain-separation constants: a `&'static str` is fixed at compile time and
+// cannot hold a runtime secret. (Real shape from rusty_paseto.)
+#[derive(Debug)]
+pub struct EncryptionKeySeparator(&'static str);
+
+impl std::fmt::Display for EncryptionKeySeparator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SigningKeyLabel {
+    secret_label: &'static str,
+}
