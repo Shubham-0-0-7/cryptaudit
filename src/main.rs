@@ -29,6 +29,14 @@ struct Cli {
     #[arg(long)]
     include_tests: bool,
 
+    /// Config file (default: cryptaudit.toml in the scanned directory, if present)
+    #[arg(long, value_name = "FILE")]
+    config: Option<PathBuf>,
+
+    /// Ignore `// cryptaudit:allow` comments and the config file
+    #[arg(long)]
+    no_suppress: bool,
+
     /// Print the documentation for a rule, e.g. --explain CA010
     #[arg(long, value_name = "RULE")]
     explain: Option<String>,
@@ -66,9 +74,11 @@ fn run(cli: Cli) -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
     if cli.list_rules {
-        for rule in rules::all() {
+        let mut all = rules::all();
+        all.sort_by_key(|r| r.meta().id);
+        for rule in all {
             let m = rule.meta();
-            println!("{}  {:<20} {}", m.id, m.name, m.severity);
+            println!("{}  {:<28} {}", m.id, m.name, m.severity);
         }
         return Ok(ExitCode::SUCCESS);
     }
@@ -76,10 +86,25 @@ fn run(cli: Cli) -> anyhow::Result<ExitCode> {
         anyhow::bail!("{} does not exist", cli.path.display());
     }
 
+    let config_path = cli.config.clone().or_else(|| {
+        let dir = if cli.path.is_file() {
+            cli.path.parent().map(PathBuf::from).unwrap_or_default()
+        } else {
+            cli.path.clone()
+        };
+        Some(dir.join("cryptaudit.toml")).filter(|p| p.is_file())
+    });
+    let config = match &config_path {
+        Some(p) if !cli.no_suppress => Some(cryptaudit::suppress::Config::load(p)?),
+        _ => None,
+    };
+
     let report = cryptaudit::scan(
         &cli.path,
         &ScanOptions {
             include_tests: cli.include_tests,
+            config,
+            suppress: !cli.no_suppress,
         },
     );
     let shown: Vec<_> = report

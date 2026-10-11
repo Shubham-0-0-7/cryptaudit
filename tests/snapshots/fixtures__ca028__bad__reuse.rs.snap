@@ -1,0 +1,18 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+6:21 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream
+7:21 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream
+13:21 CA028 [critical/high] nonce `nonce` is used for a second encryption with the same cipher (first use at line 12): the keystream repeats
+19:21 CA028 [critical/high] nonce `nonce` is used for a second encryption with the same cipher (first use at line 18): the keystream repeats
+24:12 CA028 [critical/high] nonce `nonce` is used for a second encryption with the same cipher (first use at line 23): the keystream repeats
+30:24 CA028 [critical/medium] nonce `nonce` is defined outside this loop and never refreshed inside it: every iteration encrypts with the same nonce
+36:16 CA028 [critical/medium] nonce `nonce` is defined outside this loop and never refreshed inside it: every iteration encrypts with the same nonce
+42:50 CA028 [critical/medium] nonce `nonce` is defined outside this loop and never refreshed inside it: every iteration encrypts with the same nonce
+47:26 CA028 [critical/high] nonce `self.nonce` is used for a second encryption with the same cipher (first use at line 46): the keystream repeats
+56:12 CA028 [critical/medium] nonce derived from the clock: two nodes or threads can read the same instant, and timestamps are predictable
+61:12 CA028 [critical/medium] nonce derived from the clock: two nodes or threads can read the same instant, and timestamps are predictable
+65:12 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream
+71:12 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream
+76:9 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream

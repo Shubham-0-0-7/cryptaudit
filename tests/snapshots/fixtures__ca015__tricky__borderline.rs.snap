@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:8 CA015 [medium/low] `Token` holds secret `text` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it

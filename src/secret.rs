@@ -156,6 +156,27 @@ pub fn is_excluded(name: &str) -> bool {
     words(name).iter().any(|w| EXCLUDED.contains(&w.as_str()))
 }
 
+/// True if a type name says it holds public material: `PublicKey`, `VerifyingKey`.
+/// Its fields are not secret, whatever they are called.
+pub fn is_public_name(name: &str) -> bool {
+    words(name).iter().any(|w| {
+        matches!(
+            w.as_str(),
+            "public" | "pub" | "pubkey" | "pk" | "verifying" | "vk"
+        )
+    })
+}
+
+/// True if the only secret-sounding word is `token`: a lexer token, a ciphertext
+/// blob called `raw_token`, a bearer token that is public. Weaker than `key`.
+pub fn is_token_only(name: &str) -> bool {
+    let ws = words(name);
+    ws.iter().any(|w| w == "token" || w == "tokens")
+        && !ws.iter().any(|w| {
+            STRONG.contains(&w.as_str()) || matches!(w.as_str(), "key" | "keys" | "keypair")
+        })
+}
+
 /// Classifies a field, variable or type name.
 pub fn classify_name(name: &str) -> Option<Strength> {
     let words = words(name);
@@ -327,6 +348,29 @@ mod tests {
         ];
         for (name, want) in cases {
             assert_eq!(classify_name(name), *want, "{name}");
+        }
+    }
+
+    #[test]
+    fn public_and_token_names() {
+        for n in [
+            "PublicKey",
+            "PasetoAsymmetricPublicKey",
+            "VerifyingKey",
+            "pubkey",
+            "Pk",
+        ] {
+            assert!(is_public_name(n), "{n}");
+        }
+        for n in ["SecretKey", "SigningKey", "Publisher", "Session", "key"] {
+            assert!(!is_public_name(n), "{n}");
+        }
+        for n in ["raw_token", "token", "access_token", "Token", "tokens"] {
+            assert!(is_token_only(n), "{n}");
+        }
+        // A token that is also a key is not "token only".
+        for n in ["token_key", "secret_token", "api_key", "key", "password"] {
+            assert!(!is_token_only(n), "{n}");
         }
     }
 

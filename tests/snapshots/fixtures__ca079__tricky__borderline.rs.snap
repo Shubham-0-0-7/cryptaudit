@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:42 CA027 [high/high] hardcoded IV (an all-same-byte or counting pattern) passed to `ctr::Ctr64BE::new`

@@ -10,7 +10,7 @@ use syn::{Field, ItemImpl, ItemStruct, Type};
 use super::ca010::{DeriveHit, Items, derive_hits, fallback_owner, leaking_fields};
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::secret::{Strength, classify_name};
+use crate::secret::{Strength, classify_name, is_public_name};
 use crate::source::ParsedFile;
 
 pub static COPY_META: RuleMeta = RuleMeta {
@@ -196,6 +196,9 @@ impl DeriveRule {
             return None;
         };
         let name = self_ty.path.segments.last()?.ident.to_string();
+        if is_public_name(&name) {
+            return None;
+        }
 
         // A constant-time comparison anywhere in the impl clears it.
         let body = imp.to_token_stream().to_string();

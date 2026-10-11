@@ -12,7 +12,9 @@ use syn::{
 
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::secret::{Strength, TypeClass, classify_name, classify_type, is_excluded};
+use crate::secret::{
+    Strength, TypeClass, classify_name, classify_type, is_excluded, is_public_name,
+};
 use crate::source::ParsedFile;
 
 pub struct DebugLeak;
@@ -160,6 +162,9 @@ impl DeriveHit {
 pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool) -> Vec<DeriveHit> {
     let mut out = Vec::new();
     for s in &items.structs {
+        if is_public_name(&s.ident.to_string()) {
+            continue;
+        }
         if let Some(span) = derive_span(&s.attrs, derive) {
             let leaks = leaking_fields(classify_name(&s.ident.to_string()), &s.fields, skip);
             if !leaks.is_empty() {
@@ -172,6 +177,9 @@ pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool)
         }
     }
     for e in &items.enums {
+        if is_public_name(&e.ident.to_string()) {
+            continue;
+        }
         if let Some(span) = derive_span(&e.attrs, derive) {
             let enum_strength = classify_name(&e.ident.to_string());
             let mut leaks = Vec::new();
@@ -270,7 +278,7 @@ fn skipped_by_attr(field: &Field) -> bool {
 ///
 /// `owner` is the strength of the enclosing struct or variant name, used when
 /// the field name itself is neutral (`struct SecretKey([u8; 32])`).
-fn field_confidence(
+pub(super) fn field_confidence(
     owner: Option<Strength>,
     name: Option<&Ident>,
     ty: &Type,
@@ -332,6 +340,9 @@ fn check_manual_impl(
     let Some(self_name) = self_ty.path.segments.last().map(|s| s.ident.to_string()) else {
         return Vec::new();
     };
+    if is_public_name(&self_name) {
+        return Vec::new();
+    }
     let def = structs.get(&self_name);
     let type_strength = classify_name(&self_name);
     let owner = match def {
