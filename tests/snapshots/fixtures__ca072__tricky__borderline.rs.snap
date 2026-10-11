@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:29 CA072 [critical/low] random number generator is seeded from the clock: the seed has only a few bits of entropy

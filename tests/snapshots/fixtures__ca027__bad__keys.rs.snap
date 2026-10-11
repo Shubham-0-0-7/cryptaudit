@@ -1,0 +1,17 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+9:45 CA027 [high/high] hardcoded key (an all-same-byte or counting pattern) passed to `Key::from_slice`
+13:51 CA027 [high/medium] hardcoded key (a literal) passed to `Key::from_slice`
+19:45 CA027 [high/high] hardcoded key (an all-same-byte or counting pattern) passed to `Key::from_slice`
+25:31 CA027 [high/medium] hardcoded key (a literal) passed to `Hmac::new_from_slice`
+29:35 CA027 [high/medium] hardcoded key (a literal) passed to `Hmac::new_from_slice`
+35:31 CA027 [high/medium] hardcoded key (a literal) passed to `aes::Aes128::new_from_slice`
+39:29 CA027 [high/high] hardcoded key (an all-same-byte or counting pattern) passed to `Aes256Gcm::new_from_slice`
+44:36 CA027 [high/high] hardcoded key (an all-same-byte or counting pattern) passed to `ChaCha20Poly1305::new_from_slice`
+48:32 CA027 [high/medium] hardcoded key (a literal) passed to `ring::hmac::Key::new`
+52:43 CA027 [high/high] hardcoded key (an all-same-byte or counting pattern) passed to `ring::aead::UnboundKey::new`
+56:29 CA027 [high/medium] hardcoded key (a literal) passed to `Aes256Gcm::new_from_slice`
+60:41 CA027 [high/high] hardcoded key (an all-same-byte or counting pattern) passed to `ed25519_dalek::SigningKey::from_bytes`
+64:42 CA027 [high/high] hardcoded IV (an all-same-byte or counting pattern) passed to `ctr::Ctr64BE::new`

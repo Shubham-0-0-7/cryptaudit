@@ -1,0 +1,6 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+8:12 CA028 [critical/low] encryption with a hardcoded nonce: every message under this key shares one keystream
+16:12 CA028 [critical/medium] nonce `nonce` is used for a second encryption with the same cipher (first use at line 14): the keystream repeats

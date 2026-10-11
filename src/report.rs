@@ -26,6 +26,9 @@ pub fn human(report: &ScanReport, shown: &[&Finding], hidden: usize, min: Confid
         let _ = writeln!(out, "{pad} = confidence: {}", f.confidence);
         let _ = writeln!(out, "{pad} = help: {}\n", f.help);
     }
+    for w in &report.warnings {
+        let _ = writeln!(out, "warning: {w}");
+    }
     for e in &report.errors {
         let _ = writeln!(out, "warning: skipped {}: {}", e.path.display(), e.message);
     }
@@ -48,6 +51,9 @@ pub fn human(report: &ScanReport, shown: &[&Finding], hidden: usize, min: Confid
     if hidden > 0 {
         let _ = write!(out, " ({hidden} below --min-confidence {min} hidden)");
     }
+    if report.suppressed > 0 {
+        let _ = write!(out, " ({} suppressed)", report.suppressed);
+    }
     out.push('\n');
     out
 }
@@ -57,6 +63,8 @@ pub fn json(report: &ScanReport, shown: &[&Finding]) -> serde_json::Result<Strin
         "version": env!("CARGO_PKG_VERSION"),
         "files_scanned": report.files_scanned,
         "findings": shown,
+        "suppressed": report.suppressed,
+        "warnings": report.warnings,
         "errors": report.errors,
     }))
 }

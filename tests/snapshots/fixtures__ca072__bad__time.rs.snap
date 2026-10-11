@@ -1,0 +1,7 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+7:27 CA072 [critical/high] random number generator that produces a secret is seeded from the clock: the seed has only a few bits of entropy
+13:27 CA072 [critical/high] random number generator that produces a secret is seeded from the clock: the seed has only a few bits of entropy
+20:13 CA072 [critical/medium] random number generator is seeded from the clock: the seed has only a few bits of entropy

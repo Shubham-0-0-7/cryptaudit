@@ -1,0 +1,12 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+1:8 CA015 [medium/medium] `Session` holds secret `key` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it
+6:12 CA015 [medium/medium] `Credentials` holds secret `password` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it
+11:12 CA015 [medium/medium] `SecretKey` holds secret `0` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it
+13:8 CA015 [medium/medium] `DerivedKeys` holds secret `enc_key`, `mac_key` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it
+19:8 CA015 [medium/medium] `Wallet` holds secret `seed` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it
+31:13 CA015 [medium/medium] `key` is filled with key material and dropped without being zeroized
+39:13 CA015 [medium/medium] `secret` is filled with key material and dropped without being zeroized
+47:9 CA015 [medium/medium] `key` is filled with key material and dropped without being zeroized

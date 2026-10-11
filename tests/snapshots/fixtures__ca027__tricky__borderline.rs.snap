@@ -1,0 +1,6 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+7:29 CA027 [high/high] hardcoded key (an all-same-byte or counting pattern) passed to `Aes256Gcm::new_from_slice`
+12:29 CA027 [high/medium] hardcoded key (a literal) passed to `Aes256Gcm::new_from_slice`

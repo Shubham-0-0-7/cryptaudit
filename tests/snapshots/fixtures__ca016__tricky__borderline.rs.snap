@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:9 CA016 [medium/medium] `key` is wiped with `.fill(0)`, which the optimiser may remove: the buffer is never read again

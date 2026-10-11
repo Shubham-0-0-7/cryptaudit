@@ -4,6 +4,11 @@
 //! `// expect: CA010 high` (several separated by commas). The set of
 //! (line, rule, confidence) must match exactly, at every confidence level,
 //! so a fixture with no annotations asserts that nothing is reported.
+//!
+//! A fixture in `ca0NN/` tests rule CA0NN, plus any other rule it annotates.
+//! Other rules are ignored there: a struct that is a good CA010 fixture may
+//! legitimately be a CA015 finding. Interference between rules is checked by the
+//! calibration scans on real repositories instead.
 
 use std::collections::BTreeSet;
 use std::fmt::Write;
@@ -44,13 +49,27 @@ fn fixtures() {
             .unwrap_or(path);
         let file = ParsedFile::parse(name.to_path_buf(), source.clone(), false)
             .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
-        let findings = check_file(&file, &rules);
+        let dir_rule = path
+            .strip_prefix(&root)
+            .unwrap()
+            .components()
+            .next()
+            .unwrap()
+            .as_os_str()
+            .to_string_lossy()
+            .to_uppercase();
+        let want = expected(&source);
+        let mut relevant: BTreeSet<String> = want.iter().map(|(_, r, _)| r.clone()).collect();
+        relevant.insert(dir_rule);
+        let findings: Vec<_> = check_file(&file, &rules)
+            .into_iter()
+            .filter(|f| relevant.contains(f.rule))
+            .collect();
 
         let actual: BTreeSet<Key> = findings
             .iter()
             .map(|f| (f.line, f.rule.to_string(), f.confidence.to_string()))
             .collect();
-        let want = expected(&source);
         let missing: Vec<_> = want.difference(&actual).collect();
         let unexpected: Vec<_> = actual.difference(&want).collect();
         assert!(

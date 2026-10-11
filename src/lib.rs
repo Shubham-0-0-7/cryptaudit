@@ -6,6 +6,7 @@ pub mod report;
 pub mod rules;
 pub mod secret;
 pub mod source;
+pub mod suppress;
 
 use std::path::{Path, PathBuf};
 
@@ -17,6 +18,10 @@ pub use source::ParsedFile;
 pub struct ScanOptions {
     /// Scan `tests/`, `benches/`, `examples/` and `#[cfg(test)]` code.
     pub include_tests: bool,
+    /// Config from `cryptaudit.toml`; `None` applies no config rules.
+    pub config: Option<suppress::Config>,
+    /// Honour `// cryptaudit:allow` comments and the config. Off for audits.
+    pub suppress: bool,
 }
 
 #[derive(Serialize)]
@@ -29,15 +34,22 @@ pub struct ScanError {
 pub struct ScanReport {
     pub files_scanned: usize,
     pub findings: Vec<Finding>,
+    /// Findings silenced by comments or config.
+    pub suppressed: usize,
+    pub warnings: Vec<String>,
     pub errors: Vec<ScanError>,
 }
 
 /// Scans a directory tree or a single `.rs` file.
 pub fn scan(root: &Path, opts: &ScanOptions) -> ScanReport {
     let rules = rules::all();
+    let no_config = suppress::Config::default();
+    let config = opts.config.as_ref().unwrap_or(&no_config);
     let mut report = ScanReport {
         files_scanned: 0,
         findings: Vec::new(),
+        suppressed: 0,
+        warnings: Vec::new(),
         errors: Vec::new(),
     };
     for path in discover(root, opts.include_tests) {
@@ -55,7 +67,16 @@ pub fn scan(root: &Path, opts: &ScanOptions) -> ScanReport {
         match ParsedFile::parse(display.clone(), source, opts.include_tests) {
             Ok(file) => {
                 report.files_scanned += 1;
-                report.findings.extend(check_file(&file, &rules));
+                let found = check_file(&file, &rules);
+                if opts.suppress {
+                    let directives = suppress::Directives::parse(&display, &file.source);
+                    report.warnings.extend(directives.warnings.iter().cloned());
+                    let (kept, n) = suppress::apply(found, &directives, config, root);
+                    report.suppressed += n;
+                    report.findings.extend(kept);
+                } else {
+                    report.findings.extend(found);
+                }
             }
             Err(e) => {
                 let at = e.span().start();

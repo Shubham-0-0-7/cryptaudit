@@ -1,10 +1,15 @@
 use crate::finding::{Finding, Severity};
 use crate::source::ParsedFile;
 
+mod bytes;
 mod ca010;
 mod compare;
 mod derives;
+mod keys;
+mod nonce;
 mod results;
+mod rng;
+mod zeroize;
 
 pub struct RuleMeta {
     pub id: &'static str,
@@ -29,6 +34,14 @@ pub fn all() -> Vec<Box<dyn Rule>> {
         Box::new(compare::MacAssert),
         Box::new(results::UnwrapOnCrypto),
         Box::new(results::DiscardedVerify),
+        Box::new(keys::HardcodedKey),
+        Box::new(keys::FixedCbcIv),
+        Box::new(nonce::NonceReuse),
+        Box::new(rng::WeakRng),
+        Box::new(rng::FixedSeed),
+        Box::new(rng::TimeSeed),
+        Box::new(zeroize::MissingZeroize),
+        Box::new(zeroize::ManualZeroing),
     ]
 }
 

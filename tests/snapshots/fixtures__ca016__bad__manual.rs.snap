@@ -1,0 +1,14 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:9 CA016 [medium/medium] `key` is wiped with `.fill(0)`, which the optimiser may remove: the buffer is never read again
+8:16 CA016 [medium/high] `secret_key` is wiped with `.fill(0)`, which the optimiser may remove: the buffer is never read again
+12:25 CA016 [medium/high] `password` is wiped with `iter_mut().for_each(|b| *b = 0)`, which the optimiser may remove: the buffer is never read again
+16:5 CA016 [medium/high] `seed` is wiped with a loop that stores `0` into each byte, which the optimiser may remove: the buffer is never read again
+22:5 CA016 [medium/high] `private_key` is wiped with a loop that stores `0` into each byte, which the optimiser may remove: the buffer is never read again
+28:5 CA016 [medium/high] `secret` is wiped with a loop that stores `0` into each byte, which the optimiser may remove: the buffer is never read again
+34:5 CA016 [medium/high] `passphrase` is wiped with an assignment of zeros, which the optimiser may remove: the buffer is never read again
+38:9 CA016 [medium/medium] `key` is wiped with `copy_from_slice` of zeros, which the optimiser may remove: the buffer is never read again
+42:14 CA016 [medium/high] `session_key` is wiped with `ptr::write_bytes`, which the optimiser may remove: the buffer is never read again
+52:26 CA016 [medium/high] `self.private_key` is wiped with `.fill(0)`, which the optimiser may remove: the buffer is never read again

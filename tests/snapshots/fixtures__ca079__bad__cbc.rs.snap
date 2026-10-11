@@ -1,0 +1,8 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+7:29 CA079 [high/high] fixed IV passed to `Aes256CbcEnc::new`: CBC with a constant IV is deterministic
+11:41 CA079 [high/high] fixed IV passed to `cbc::Encryptor::new`: CBC with a constant IV is deterministic
+17:41 CA079 [high/high] fixed IV passed to `cbc::Decryptor::new`: CBC with a constant IV is deterministic
+21:41 CA079 [high/high] fixed IV passed to `cbc::Encryptor::new_from_slices`: CBC with a constant IV is deterministic

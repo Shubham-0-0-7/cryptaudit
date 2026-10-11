@@ -54,3 +54,14 @@ impl std::fmt::Display for EncryptionKeySeparator {
 pub struct SigningKeyLabel {
     secret_label: &'static str,
 }
+
+// A type named public holds public material even when its field is just `key`.
+#[derive(Debug, Clone)]
+pub struct PasetoPublicKey {
+    key: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub struct VerifyingKeyBytes {
+    key: [u8; 32],
+}
