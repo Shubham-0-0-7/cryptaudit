@@ -13,7 +13,7 @@ use quote::ToTokens;
 use syn::visit::{self, Visit};
 use syn::{Expr, ExprMethodCall, ItemFn};
 
-use super::bytes::{ConstCollector, ConstEnv, literal_bytes, mentions_time};
+use super::bytes::{ConstCollector, ConstEnv, literal_bytes, macro_idents, mentions_time};
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::source::ParsedFile;
@@ -100,6 +100,22 @@ const ENCRYPT: &[&str] = &[
     "seal_in_place",
     "seal_in_place_append_tag",
     "seal_in_place_separate_tag",
+];
+
+/// Names that are passed first to an `encrypt` method but are not nonces.
+const NOT_NONCES: &[&str] = &[
+    "ctx",
+    "context",
+    "sched",
+    "schedule",
+    "state",
+    "plaintext",
+    "msg",
+    "message",
+    "data",
+    "buf",
+    "input",
+    "from",
 ];
 
 /// Methods that read a value without changing it.
@@ -321,6 +337,19 @@ impl Visitor<'_> {
         let span = call.method.span();
         let receiver = call.receiver.to_token_stream().to_string();
         let nonce_arg = &call.args[0];
+        // `value.encrypt(ctx, key)`: a key-store context, not a nonce.
+        if let Expr::Path(p) = nonce_arg {
+            if p.path
+                .get_ident()
+                .is_some_and(|i| NOT_NONCES.contains(&i.to_string().as_str()))
+            {
+                return;
+            }
+        }
+        // `self.encrypt(plaintext, ..)` is a wrapper method on the type itself.
+        if matches!(&*call.receiver, Expr::Path(p) if p.path.is_ident("self")) {
+            return;
+        }
 
         match self.nonce_ref(nonce_arg) {
             NonceRef::Other => {}
@@ -453,6 +482,10 @@ impl<'ast> Visit<'ast> for Refreshed {
         visit::visit_expr_reference(self, e);
     }
 
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        self.names.extend(macro_idents(m));
+    }
+
     fn visit_expr_method_call(&mut self, c: &'ast ExprMethodCall) {
         if !READ_ONLY.contains(&c.method.to_string().as_str()) {
             if let Some(n) = root_name(&c.receiver) {
@@ -568,6 +601,14 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
                 Origin::Fresh
             };
             self.refresh(&name, origin);
+        }
+    }
+
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        for name in macro_idents(m) {
+            if self.state.vars.contains_key(&name) {
+                self.refresh(&name, Origin::Fresh);
+            }
         }
     }
 

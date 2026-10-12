@@ -29,7 +29,6 @@ const STRONG: &[&str] = &[
     "password",
     "passwords",
     "passwd",
-    "pwd",
     "passphrase",
     "mnemonic",
     "apikey",
@@ -116,6 +115,16 @@ const EXCLUDED: &[&str] = &[
     "label",
     "error",
     "err",
+    // Public parts of a protocol: certificates, OCSP staples, KEM ciphertexts.
+    "ocsp",
+    "cert",
+    "certs",
+    "certificate",
+    "ciphertext",
+    "encapsulated",
+    "signature",
+    "scheme",
+    "pwd",
 ];
 
 /// Splits an identifier into lowercase words on `_`, camelCase, acronym and
@@ -156,13 +165,29 @@ pub fn is_excluded(name: &str) -> bool {
     words(name).iter().any(|w| EXCLUDED.contains(&w.as_str()))
 }
 
+/// True if a field name says the value is already encrypted: `encrypted_private_key`,
+/// `wrapped_signing_key`. Such a field is ciphertext, not key material.
+pub fn is_ciphertext_name(name: &str) -> bool {
+    words(name)
+        .iter()
+        .any(|w| matches!(w.as_str(), "encrypted" | "wrapped"))
+}
+
 /// True if a type name says it holds public material: `PublicKey`, `VerifyingKey`.
 /// Its fields are not secret, whatever they are called.
 pub fn is_public_name(name: &str) -> bool {
     words(name).iter().any(|w| {
         matches!(
             w.as_str(),
-            "public" | "pub" | "pubkey" | "pk" | "verifying" | "vk"
+            "public"
+                | "pub"
+                | "pubkey"
+                | "pk"
+                | "verifying"
+                | "vk"
+                | "encap"
+                | "encapsulation"
+                | "encapsulated"
         )
     })
 }
@@ -323,7 +348,7 @@ mod tests {
         let cases: &[(&str, Option<Strength>)] = &[
             // Strong on their own.
             ("password", Some(Strong)), ("user_password", Some(Strong)), ("passwd", Some(Strong)),
-            ("pwd", Some(Strong)), ("passphrase", Some(Strong)), ("secret", Some(Strong)),
+            ("pwd", None), ("passphrase", Some(Strong)), ("secret", Some(Strong)),
             ("client_secret", Some(Strong)), ("SecretKey", Some(Strong)), ("secret_key", Some(Strong)),
             ("private_key", Some(Strong)), ("PrivateKey", Some(Strong)), ("privkey", Some(Strong)),
             ("sk", Some(Strong)), ("seed", Some(Strong)), ("rng_seed", Some(Strong)),

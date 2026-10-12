@@ -85,6 +85,17 @@ fn crypto_result(method: &str) -> Option<Confidence> {
     }
 }
 
+/// `File::open(..)`, `OpenOptions::new().read(true).open(..)`: opening a file, not a sealed box.
+fn is_file_open(call: &ExprMethodCall) -> bool {
+    use quote::ToTokens;
+    call.method == "open" && {
+        let receiver = call.receiver.to_token_stream().to_string();
+        ["File", "fs", "OpenOptions", "options"]
+            .iter()
+            .any(|w| receiver.contains(w))
+    }
+}
+
 const BARE: &str = "bare statement";
 
 pub struct UnwrapOnCrypto;
@@ -131,7 +142,7 @@ impl<'ast> Visit<'ast> for UnwrapVisitor<'_> {
         if matches!(outer.as_str(), "unwrap" | "expect") {
             if let Expr::MethodCall(inner) = &*call.receiver {
                 let name = inner.method.to_string();
-                if let Some(confidence) = crypto_result(&name) {
+                if let Some(confidence) = crypto_result(&name).filter(|_| !is_file_open(inner)) {
                     self.out.push(self.file.finding(
                         &UNWRAP_META,
                         confidence,
@@ -156,6 +167,9 @@ struct DiscardVisitor<'a> {
 impl DiscardVisitor<'_> {
     fn report(&mut self, call: &ExprMethodCall, how: &str) {
         let name = call.method.to_string();
+        if is_file_open(call) {
+            return;
+        }
         let Some(mut confidence) = crypto_result(&name) else {
             return;
         };

@@ -13,7 +13,8 @@ use syn::{
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::secret::{
-    Strength, TypeClass, classify_name, classify_type, is_excluded, is_public_name,
+    Strength, TypeClass, classify_name, classify_type, is_ciphertext_name, is_excluded,
+    is_public_name,
 };
 use crate::source::ParsedFile;
 
@@ -166,6 +167,9 @@ pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool)
             continue;
         }
         if let Some(span) = derive_span(&s.attrs, derive) {
+            if derive == "Debug" && has_custom_debug_attr(&s.attrs) {
+                continue;
+            }
             let leaks = leaking_fields(classify_name(&s.ident.to_string()), &s.fields, skip);
             if !leaks.is_empty() {
                 out.push(DeriveHit {
@@ -222,6 +226,10 @@ pub(super) fn derive_span(attrs: &[Attribute], name: &str) -> Option<Span> {
             else {
                 continue;
             };
+            // `cfg_attr(test, derive(Debug))` only exists in test builds.
+            if metas.first().is_some_and(crate::source::cfg_requires_test) {
+                continue;
+            }
             for meta in metas.iter().skip(1) {
                 if let Meta::List(list) = meta {
                     if list.path.is_ident("derive") {
@@ -270,7 +278,9 @@ pub(super) fn fallback_owner(owner: Option<Strength>, fields: &Fields) -> Option
 fn skipped_by_attr(field: &Field) -> bool {
     field.attrs.iter().any(|a| {
         let tokens = a.to_token_stream().to_string().to_lowercase();
-        tokens.contains("debug") && (tokens.contains("skip") || tokens.contains("ignore"))
+        // `#[debug("<redacted>")]` (derive_more) replaces the output with a fixed string.
+        tokens.contains("debug")
+            && (tokens.contains("skip") || tokens.contains("ignore") || tokens.contains('"'))
     })
 }
 
@@ -294,7 +304,7 @@ pub(super) fn field_confidence(
     let by_name = match name {
         Some(ident) => {
             let n = ident.to_string();
-            if is_excluded(&n) {
+            if is_excluded(&n) || is_ciphertext_name(&n) {
                 return None;
             }
             classify_name(&n)
@@ -309,6 +319,11 @@ pub(super) fn field_confidence(
         (Some(_), Redacting | TypeClass::Static) => None,
         (None, _) => match (owner, &class) {
             (Some(Strong), Bytes) => Some(High),
+            // The owner's name alone does not make a named integer or string a
+            // secret (`Credential { expect_selected: Option<isize> }`); only an
+            // unnamed field (`Seed(u64)`) inherits it.
+            (Some(Strong), Int) if name.is_some() => None,
+            (Some(Strong), Str) if name.is_some() => Some(Low),
             (Some(Strong), Str | Int) => Some(Medium),
             (Some(Weak), Bytes) if name.is_none() => Some(High),
             (Some(Weak), Bytes) => Some(Medium),
@@ -643,4 +658,11 @@ impl<'ast> Visit<'ast> for Aliases {
         }
         visit::visit_local(self, local);
     }
+}
+
+/// `#[debug("Key(*****)")]` on the type: derive_more formats it with a fixed string.
+fn has_custom_debug_attr(attrs: &[Attribute]) -> bool {
+    attrs
+        .iter()
+        .any(|a| a.path().is_ident("debug") && a.to_token_stream().to_string().contains('"'))
 }

@@ -232,6 +232,61 @@ pub fn root_var(expr: &Expr) -> Option<String> {
 
 /// Drops a local from the constant environment once it may have been overwritten:
 /// `kdf(&mut key)`, `rng.fill_bytes(&mut key)`, `key.copy_from_slice(..)`, `key[0] = 1`.
+/// Macros that only read their arguments.
+const PASSIVE_MACROS: &[&str] = &[
+    "assert",
+    "assert_eq",
+    "assert_ne",
+    "debug_assert",
+    "debug_assert_eq",
+    "debug_assert_ne",
+    "println",
+    "print",
+    "eprintln",
+    "eprint",
+    "format",
+    "format_args",
+    "write",
+    "writeln",
+    "panic",
+    "vec",
+    "matches",
+    "dbg",
+    "trace",
+    "debug",
+    "info",
+    "warn",
+    "error",
+    "log",
+];
+
+/// Identifiers mentioned in a macro call that may change them: `copy_slices!(src, &mut buf)`.
+/// Empty for macros known to only read their arguments.
+pub fn macro_idents(mac: &syn::Macro) -> Vec<String> {
+    let name = mac
+        .path
+        .segments
+        .last()
+        .map(|s| s.ident.to_string())
+        .unwrap_or_default();
+    if PASSIVE_MACROS.contains(&name.as_str()) {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    collect_idents(mac.tokens.clone(), &mut out);
+    out
+}
+
+fn collect_idents(tokens: proc_macro2::TokenStream, out: &mut Vec<String>) {
+    for tt in tokens {
+        match tt {
+            proc_macro2::TokenTree::Ident(i) => out.push(i.to_string()),
+            proc_macro2::TokenTree::Group(g) => collect_idents(g.stream(), out),
+            _ => {}
+        }
+    }
+}
+
 pub struct Invalidate<'a> {
     pub env: &'a mut ConstEnv,
 }
@@ -251,6 +306,12 @@ impl<'ast> Visit<'ast> for Invalidate<'_> {
             self.env.remove(&n);
         }
         visit::visit_expr_assign(self, e);
+    }
+
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        for name in macro_idents(m) {
+            self.env.remove(&name);
+        }
     }
 
     fn visit_expr_method_call(&mut self, c: &'ast syn::ExprMethodCall) {
