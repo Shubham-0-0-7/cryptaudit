@@ -144,6 +144,11 @@ fn has_word(seg: &str, list: &[&str]) -> bool {
     words(seg).iter().any(|w| list.contains(&w.as_str()))
 }
 
+fn is_block_or_stream(seg: &str) -> bool {
+    let lower = seg.to_lowercase();
+    is_cipher_name(seg) && !(lower.contains("hmac") || lower.contains("cmac"))
+}
+
 fn is_cipher_name(seg: &str) -> bool {
     let lower = seg.to_lowercase();
     CIPHER_STEMS.iter().any(|s| lower.contains(s)) || has_word(seg, CIPHER_WORDS)
@@ -158,6 +163,10 @@ fn sinks(call: &ExprCall) -> Vec<Sink<'_>> {
     let [.., prev, last] = segs.as_slice() else {
         return Vec::new();
     };
+    // `hmac::Tag::new(output)` wraps a MAC value; it is not a key.
+    if matches!(prev.as_str(), "Tag" | "Output" | "Digest" | "Signature") {
+        return Vec::new();
+    }
     let args: Vec<&Expr> = call.args.iter().collect();
     let key = |i: usize| {
         args.get(i).map(|a| Sink {
@@ -193,7 +202,13 @@ fn sinks(call: &ExprCall) -> Vec<Sink<'_>> {
             out.extend(key(0));
             out.extend(iv(1));
         }
-        "new" if cipherish && args.len() == 1 => out.extend(key(0)),
+        // `ShoHmacSha256::new(b"label")` and the like take a label, not a key; only
+        // block and stream ciphers take their key as the single argument.
+        "new"
+            if args.len() == 1 && segs[..segs.len() - 1].iter().any(|s| is_block_or_stream(s)) =>
+        {
+            out.extend(key(0));
+        }
         "from_slice" | "clone_from_slice" if prev == "Key" => out.extend(key(0)),
         "from_bytes" | "from" | "from_slice" | "new" if KEY_TYPES.contains(&prev.as_str()) => {
             out.extend(key(0));
@@ -231,6 +246,10 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
     }
 
     fn visit_impl_item_fn(&mut self, f: &'ast syn::ImplItemFn) {
+        // `impl Default`: a zeroed placeholder that is replaced before use.
+        if f.sig.ident == "default" {
+            return;
+        }
         let saved = std::mem::replace(&mut self.env, self.module_env.clone());
         visit::visit_impl_item_fn(self, f);
         self.env = saved;
@@ -268,6 +287,10 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
     fn visit_expr_assign(&mut self, e: &'ast syn::ExprAssign) {
         Invalidate { env: &mut self.env }.visit_expr_assign(e);
         visit::visit_expr_assign(self, e);
+    }
+
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        Invalidate { env: &mut self.env }.visit_macro(m);
     }
 
     fn visit_expr_method_call(&mut self, c: &'ast syn::ExprMethodCall) {

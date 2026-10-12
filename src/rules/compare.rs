@@ -269,6 +269,34 @@ fn compare_confidence(a: &Expr, b: &Expr, env: &Env) -> Option<Confidence> {
     })
 }
 
+/// A crate that implements `PartialEq` with `ct_eq` (orion, `subtle`-based newtypes)
+/// compares its own tag types in constant time, so `tag_a == tag_b` between two
+/// such values is fine. Only an explicit conversion to raw bytes is still suspect.
+fn ct_adjusted(file: &ParsedFile, a: &Expr, b: &Expr, c: Confidence) -> Confidence {
+    if file.ct_partialeq && !(shows_raw_bytes(a) || shows_raw_bytes(b)) {
+        c.min(Confidence::Low)
+    } else {
+        c
+    }
+}
+
+fn shows_raw_bytes(expr: &Expr) -> bool {
+    match expr {
+        Expr::Reference(e) => shows_raw_bytes(&e.expr),
+        Expr::Paren(e) => shows_raw_bytes(&e.expr),
+        Expr::Unary(e) => shows_raw_bytes(&e.expr),
+        Expr::Try(e) => shows_raw_bytes(&e.expr),
+        Expr::Index(_) => true,
+        Expr::MethodCall(c) => {
+            matches!(
+                c.method.to_string().as_str(),
+                "as_slice" | "as_ref" | "as_bytes" | "to_bytes" | "into_bytes" | "to_vec"
+            ) || shows_raw_bytes(&c.receiver)
+        }
+        _ => false,
+    }
+}
+
 fn is_constant_time_fn(name: &str) -> bool {
     name.contains("ct_eq") || name.contains("constant_time") || name.starts_with("ct_")
 }
@@ -304,7 +332,9 @@ impl<'ast> Visit<'ast> for EqVisitor<'_> {
 
     fn visit_expr_binary(&mut self, e: &'ast ExprBinary) {
         if self.ct_depth == 0 && matches!(e.op, BinOp::Eq(_) | BinOp::Ne(_)) {
-            if let Some(confidence) = compare_confidence(&e.left, &e.right, &self.env) {
+            if let Some(confidence) = compare_confidence(&e.left, &e.right, &self.env)
+                .map(|c| ct_adjusted(self.file, &e.left, &e.right, c))
+            {
                 let op = if matches!(e.op, BinOp::Eq(_)) {
                     "=="
                 } else {
@@ -378,7 +408,9 @@ impl<'ast> Visit<'ast> for AssertVisitor<'_> {
         let (Some(a), Some(b)) = (args.first(), args.iter().nth(1)) else {
             return;
         };
-        if let Some(confidence) = compare_confidence(a, b, &self.env) {
+        if let Some(confidence) =
+            compare_confidence(a, b, &self.env).map(|c| ct_adjusted(self.file, a, b, c))
+        {
             let name = mac
                 .path
                 .segments

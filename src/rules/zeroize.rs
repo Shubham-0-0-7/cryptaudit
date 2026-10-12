@@ -9,7 +9,7 @@ use syn::spanned::Spanned;
 use syn::visit::{self, Visit};
 use syn::{Expr, ExprMethodCall, ItemFn, ItemStruct, Lit};
 
-use super::bytes::root_var;
+use super::bytes::{macro_idents, root_var};
 use super::ca010::{Items, derive_span, fallback_owner, field_confidence};
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
@@ -182,7 +182,10 @@ fn struct_finding(
     protected: &HashSet<String>,
 ) -> Option<Finding> {
     let name = s.ident.to_string();
-    if protected.contains(&name) || derive_span(&s.attrs, "Copy").is_some() || is_public_name(&name)
+    if protected.contains(&name)
+        || is_repr_c(&s.attrs)
+        || derive_span(&s.attrs, "Copy").is_some()
+        || is_public_name(&name)
     {
         return None;
     }
@@ -190,8 +193,7 @@ fn struct_finding(
     let mut leaks: Vec<(String, Confidence)> = Vec::new();
     for (i, f) in s.fields.iter().enumerate() {
         // A borrowed slice is not owned: the caller decides how it is wiped.
-        if !matches!(classify_type(&f.ty), TypeClass::Bytes | TypeClass::Str)
-            || matches!(&f.ty, syn::Type::Reference(_))
+        if !matches!(classify_type(&f.ty), TypeClass::Bytes | TypeClass::Str) || is_borrowed(&f.ty)
         {
             continue;
         }
@@ -355,6 +357,26 @@ impl<'ast> Visit<'ast> for LocalVisitor<'_> {
             self.hand_off(arg);
         }
         visit::visit_expr_method_call(self, c);
+    }
+
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        // `zeroize_call!(buf)`: a wrapper macro that wipes what it is given.
+        let name = m
+            .path
+            .segments
+            .last()
+            .map(|s| s.ident.to_string())
+            .unwrap_or_default();
+        if ["zeroize", "wipe", "scrub"]
+            .iter()
+            .any(|w| name.contains(w))
+        {
+            for n in macro_idents(m) {
+                if let Some(l) = self.locals.get_mut(&n) {
+                    l.zeroized = true;
+                }
+            }
+        }
     }
 
     fn visit_expr_call(&mut self, c: &'ast syn::ExprCall) {
@@ -645,4 +667,24 @@ impl<'ast> Visit<'ast> for ZeroStores {
         }
         visit::visit_expr_assign(self, e);
     }
+}
+
+/// `&[u8]`, `Option<&[u8]>`, `Option<&'a str>`: the struct does not own the bytes.
+fn is_borrowed(ty: &syn::Type) -> bool {
+    match ty {
+        syn::Type::Reference(_) => true,
+        syn::Type::Path(p) => p.path.segments.last().is_some_and(|seg| {
+            seg.ident == "Option"
+                && matches!(&seg.arguments, syn::PathArguments::AngleBracketed(a)
+                    if a.args.iter().any(|g| matches!(g, syn::GenericArgument::Type(t) if is_borrowed(t))))
+        }),
+        _ => false,
+    }
+}
+
+/// `#[repr(C)]` structs are FFI values handed to foreign code, which cannot run `Drop`.
+fn is_repr_c(attrs: &[syn::Attribute]) -> bool {
+    attrs
+        .iter()
+        .any(|a| a.path().is_ident("repr") && a.to_token_stream().to_string().contains('C'))
 }

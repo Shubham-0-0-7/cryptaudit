@@ -13,6 +13,8 @@ pub struct ParsedFile {
     pub path: PathBuf,
     pub source: String,
     pub ast: syn::File,
+    /// Some file of the crate implements `PartialEq` with a constant-time compare.
+    pub ct_partialeq: bool,
 }
 
 impl ParsedFile {
@@ -21,7 +23,12 @@ impl ParsedFile {
         if !include_tests {
             StripTests.visit_file_mut(&mut ast);
         }
-        Ok(ParsedFile { path, source, ast })
+        Ok(ParsedFile {
+            path,
+            source,
+            ast,
+            ct_partialeq: false,
+        })
     }
 
     pub fn finding(
@@ -111,7 +118,7 @@ fn is_test_attr(attr: &Attribute) -> bool {
 }
 
 /// `test` and `all(test, ..)` require test; `any(test, ..)` and `not(test)` do not.
-fn cfg_requires_test(meta: &Meta) -> bool {
+pub(crate) fn cfg_requires_test(meta: &Meta) -> bool {
     match meta {
         Meta::Path(p) => p.is_ident("test"),
         Meta::List(list) if list.path.is_ident("all") => list
