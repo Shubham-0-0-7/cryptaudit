@@ -1,0 +1,246 @@
+repo,commit,rule,confidence,location,label,reason
+boringtun,6dcc889,CA015,medium,boringtun/src/device/peer.rs:19,TH,
+boringtun,6dcc889,CA015,medium,boringtun/src/ffi/mod.rs:94,FP,ffi-struct
+boringtun,6dcc889,CA015,medium,boringtun/src/noise/handshake.rs:232,TH,
+boringtun,6dcc889,CA010,high,boringtun/src/noise/handshake.rs:254,FP,public-material (derived from a public key)
+boringtun,6dcc889,CA010,high,boringtun/src/noise/handshake.rs:255,TP,preshared key printed
+boringtun,6dcc889,CA015,medium,boringtun/src/noise/handshake.rs:260,TH,
+boringtun,6dcc889,CA010,high,boringtun/src/noise/handshake.rs:273,TP,chaining key printed
+boringtun,6dcc889,CA010,high,boringtun/src/noise/handshake.rs:280,TP,chaining key printed
+boringtun,6dcc889,CA015,medium,boringtun/src/noise/rate_limiter.rs:37,TH,
+boringtun,6dcc889,CA010,medium,boringtun/src/noise/session.rs:39,FP,counter-or-index
+boringtun,6dcc889,CA015,medium,boringtun/src/noise/session.rs:40,FP,counter-or-index
+boringtun,6dcc889,CA015,medium,boringtun/src/serialization.rs:1,TH,
+curve25519-dalek,97a020d,CA010,low,ed25519-dalek/src/context.rs:54,FP,type-level-protection (Debug redacted / generic key ref)
+curve25519-dalek,97a020d,CA010,low,ed25519-dalek/src/signing.rs:589,FP,type-level-protection (Debug redacted / generic key ref)
+curve25519-dalek,97a020d,CA012,high,x25519-dalek/src/x25519.rs:204,TP,StaticSecret serialisable behind the serde feature
+magic-wormhole.rs,41d78ae,CA010,high,src/core.rs:268,TP,Key derives Debug over raw secretbox key
+magic-wormhole.rs,41d78ae,CA015,medium,src/core.rs:269,TH,
+magic-wormhole.rs,41d78ae,CA010,high,src/core.rs:743,TP,Password derives Debug
+magic-wormhole.rs,41d78ae,CA012,high,src/core.rs:743,TP,Password derives Serialize
+magic-wormhole.rs,41d78ae,CA015,medium,src/core.rs:746,TH,
+magic-wormhole.rs,41d78ae,CA013,high,src/core.rs:752,TP,password compared with ==
+magic-wormhole.rs,41d78ae,CA021,high,src/transfer/v2.rs:260,FP,"compares a file hash for resume, not a MAC"
+magic-wormhole.rs,41d78ae,CA015,medium,src/transit/crypto.rs:103,TH,
+magic-wormhole.rs,41d78ae,CA015,medium,src/transit/crypto.rs:242,TH,
+password-hashes,958527c,CA015,medium,argon2/src/lib.rs:205,FP,borrowed-field (Option<&[u8]> pepper)
+password-hashes,958527c,CA015,medium,balloon-hash/src/lib.rs:86,FP,borrowed-field (Option<&[u8]> pepper)
+rage,b5b68c4,CA010,medium,age/src/cli_common/error.rs:7,FP,non-secret-name (enum variant names)
+rage,b5b68c4,CA021,low,age/src/ssh/identity.rs:68,FP,public-material (4-byte key fingerprint)
+rage,b5b68c4,CA021,low,age/src/ssh/identity.rs:100,FP,public-material (4-byte key fingerprint)
+rage,b5b68c4,CA015,medium,age/src/ssh/identity.rs:112,TH,25519 secret copy left on stack
+rage,b5b68c4,CA010,low,age/src/ssh/identity.rs:157,FP,non-secret-name
+rage,b5b68c4,CA013,low,age/src/ssh/identity.rs:157,FP,non-secret-name
+rage,b5b68c4,CA015,medium,age/src/ssh.rs:111,FP,public-material (public key blob)
+rage,b5b68c4,CA021,low,age-core/src/plugin.rs:260,FP,non-secret-name (plugin name)
+rage,b5b68c4,CA021,low,age-core/src/plugin.rs:266,FP,non-secret-name (plugin name)
+rage,b5b68c4,CA028,medium,age-core/src/primitives.rs:20,FP,by-design (zero nonce under a one-time key)
+rage,b5b68c4,CA010,low,rage/src/bin/rage/cli.rs:80,FP,non-secret-name (bool flag)
+rust-openssl,6a639a0,CA015,medium,openssl/src/envelope.rs:32,FP,public-material (RSA-wrapped keys)
+rust-openssl,6a639a0,CA013,high,openssl/src/pkcs5.rs:14,TP,derive PartialEq on key+iv pair
+rust-openssl,6a639a0,CA010,high,openssl/src/pkcs5.rs:14,TP,derive Debug prints key
+rust-openssl,6a639a0,CA015,medium,openssl/src/pkcs5.rs:15,TH,
+rust-openssl,6a639a0,CA028,high,openssl/src/pkey_ctx.rs:225,FP,"`from` is plaintext, not a nonce"
+rust-openssl,6a639a0,CA015,low,openssl/src/x509/extension.rs:233,FP,non-secret-name
+rust-openssl,6a639a0,CA015,medium,openssl-sys/src/handwritten/aes.rs:7,FP,ffi-struct
+snow,8ac60f5,CA015,medium,src/builder.rs:25,TH,
+snow,8ac60f5,CA011,low,src/params/patterns.rs:91,FP,counter-or-index (PSK index)
+snow,8ac60f5,CA013,low,src/params/patterns.rs:91,FP,counter-or-index
+snow,8ac60f5,CA010,low,src/params/patterns.rs:91,FP,counter-or-index
+snow,8ac60f5,CA015,medium,src/resolvers/default.rs:133,TH,
+snow,8ac60f5,CA015,medium,src/resolvers/default.rs:141,TH,
+snow,8ac60f5,CA015,medium,src/resolvers/default.rs:149,TH,
+snow,8ac60f5,CA015,medium,src/resolvers/default.rs:156,TH,
+snow,8ac60f5,CA015,medium,src/resolvers/default.rs:163,TH,
+snow,8ac60f5,CA028,medium,src/resolvers/default.rs:345,FP,macro-not-seen
+snow,8ac60f5,CA028,medium,src/resolvers/default.rs:397,FP,macro-not-seen
+snow,8ac60f5,CA028,medium,src/resolvers/default.rs:449,FP,macro-not-seen
+snow,8ac60f5,CA027,high,src/resolvers/default.rs:629,FP,placeholder-init
+snow,8ac60f5,CA027,high,src/resolvers/ring.rs:77,FP,placeholder-init
+snow,8ac60f5,CA028,medium,src/resolvers/ring.rs:101,FP,macro-not-seen
+snow,8ac60f5,CA027,high,src/resolvers/ring.rs:157,FP,placeholder-init
+snow,8ac60f5,CA028,medium,src/resolvers/ring.rs:180,FP,macro-not-seen
+snow,8ac60f5,CA011,low,src/symmetricstate.rs:11,TP,Copy on chaining key / hash state
+snow,8ac60f5,CA015,medium,src/symmetricstate.rs:60,TH,
+snow,8ac60f5,CA015,medium,src/symmetricstate.rs:91,TH,
+jsonwebtoken,11f83ab,CA010,low,src/crypto/mod.rs:82,FP,non-secret-name
+jsonwebtoken,11f83ab,CA010,low,src/errors.rs:37,FP,non-secret-name
+jsonwebtoken,11f83ab,CA010,low,src/jwk.rs:72,FP,non-secret-name
+jsonwebtoken,11f83ab,CA013,low,src/jwk.rs:72,FP,non-secret-name
+jsonwebtoken,11f83ab,CA010,low,src/jwk.rs:278,FP,non-secret-name
+jsonwebtoken,11f83ab,CA013,low,src/jwk.rs:278,FP,non-secret-name
+jsonwebtoken,11f83ab,CA010,low,src/jwk.rs:357,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA013,low,src/jwk.rs:357,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA012,low,src/jwk.rs:357,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA015,low,src/jwk.rs:358,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA010,low,src/jwk.rs:384,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA013,low,src/jwk.rs:384,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA012,low,src/jwk.rs:384,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA015,low,src/jwk.rs:385,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA010,low,src/jwk.rs:410,TP,symmetric JWK value in Debug
+jsonwebtoken,11f83ab,CA013,low,src/jwk.rs:410,TP,symmetric JWK value compared with ==
+jsonwebtoken,11f83ab,CA012,low,src/jwk.rs:410,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA015,low,src/jwk.rs:411,TH,
+jsonwebtoken,11f83ab,CA010,low,src/jwk.rs:431,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA013,low,src/jwk.rs:431,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA012,low,src/jwk.rs:431,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA015,low,src/jwk.rs:432,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA010,low,src/jwk.rs:670,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA013,low,src/jwk.rs:670,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA012,low,src/jwk.rs:670,FP,public-material (JWK public parameters)
+jsonwebtoken,11f83ab,CA010,medium,src/pem/decoder.rs:43,TP,PEM bytes (may be a private key) in Debug
+jsonwebtoken,11f83ab,CA015,medium,src/pem/decoder.rs:44,TH,
+jsonwebtoken,11f83ab,CA010,low,src/validation.rs:30,FP,non-secret-name
+jsonwebtoken,11f83ab,CA013,low,src/validation.rs:30,FP,non-secret-name
+rustls,5535e9d,CA010,medium,bogo/src/client.rs:237,FP,non-secret-name
+rustls,5535e9d,CA010,low,bogo/src/client.rs:352,FP,non-secret-name
+rustls,5535e9d,CA010,medium,bogo/src/main.rs:580,FP,non-secret-name
+rustls,5535e9d,CA010,medium,bogo/src/main.rs:604,FP,non-secret-name
+rustls,5535e9d,CA010,high,bogo/src/main.rs:1110,NP,bogo test harness
+rustls,5535e9d,CA015,medium,bogo/src/main.rs:1111,NP,bogo test harness
+rustls,5535e9d,CA010,low,bogo/src/opts.rs:17,FP,non-secret-name
+rustls,5535e9d,CA010,low,bogo/src/server.rs:183,FP,non-secret-name
+rustls,5535e9d,CA010,low,ci-bench/src/benchmark.rs:64,FP,non-secret-name
+rustls,5535e9d,CA010,low,rustls/src/client/config.rs:62,FP,non-secret-name
+rustls,5535e9d,CA010,low,rustls/src/client/ech.rs:203,FP,public-material
+rustls,5535e9d,CA010,low,rustls/src/client/test.rs:1005,NP,test code
+rustls,5535e9d,CA010,high,rustls/src/crypto/hpke.rs:253,FP,public-material (HPKE enc)
+rustls,5535e9d,CA015,medium,rustls/src/crypto/hpke.rs:254,FP,public-material (HPKE enc)
+rustls,5535e9d,CA010,low,rustls/src/crypto/signer.rs:32,FP,non-secret-name
+rustls,5535e9d,CA010,low,rustls/src/crypto/signer.rs:96,FP,non-secret-name
+rustls,5535e9d,CA010,high,rustls/src/crypto/signer.rs:202,FP,non-secret-name
+rustls,5535e9d,CA015,medium,rustls/src/crypto/signer.rs:203,FP,non-secret-name
+rustls,5535e9d,CA027,medium,rustls/src/crypto/test_provider.rs:278,FP,not-a-key-ctor
+rustls,5535e9d,CA021,low,rustls/src/crypto/test_provider.rs:431,NP,toy AEAD in test provider
+rustls,5535e9d,CA021,low,rustls/src/crypto/test_provider.rs:499,NP,toy AEAD in test provider
+rustls,5535e9d,CA027,high,rustls/src/crypto/tls13.rs:17,FP,not-a-key-ctor
+rustls,5535e9d,CA010,high,rustls/src/error/mod.rs:1355,FP,non-secret-name
+rustls,5535e9d,CA013,high,rustls/src/error/mod.rs:1355,FP,non-secret-name
+rustls,5535e9d,CA010,low,rustls/src/msgs/client_hello.rs:760,FP,non-secret-name
+rustls,5535e9d,CA010,low,rustls/src/msgs/server_hello.rs:438,FP,public-material
+rustls,5535e9d,CA013,low,rustls/src/msgs/server_hello.rs:438,FP,public-material
+rustls,5535e9d,CA010,low,rustls/src/server/config.rs:79,FP,non-secret-name
+rustls,5535e9d,CA015,medium,rustls-aws-lc-rs/src/kx.rs:143,FP,public-material (KEM encapsulation key)
+rustls,5535e9d,CA015,medium,rustls-aws-lc-rs/src/ticketer.rs:34,TH,AES ticket key buffer not wiped
+rustls,5535e9d,CA027,medium,rustls-fuzzing-provider/src/lib.rs:220,FP,not-a-key-ctor
+rustls,5535e9d,CA021,low,rustls-fuzzing-provider/src/lib.rs:369,NP,toy AEAD in fuzzing provider
+rustls,5535e9d,CA021,low,rustls-fuzzing-provider/src/lib.rs:437,NP,toy AEAD in fuzzing provider
+rustls,5535e9d,CA018,medium,rustls-test/src/lib.rs:1627,NP,test helper
+orion,f4b3db3,CA021,high,src/hazardous/aead/chacha20poly1305.rs:293,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA021,high,src/hazardous/aead/chacha20poly1305.rs:412,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA015,medium,src/hazardous/aead/streaming.rs:279,FP,macro-not-seen (zeroize_call!)
+orion,f4b3db3,CA021,medium,src/hazardous/aead/streaming.rs:371,FP,type-level-protection
+orion,f4b3db3,CA010,low,src/hazardous/dsa/ml_dsa/mldsa44.rs:387,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/dsa/ml_dsa/mldsa44.rs:387,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA010,low,src/hazardous/dsa/ml_dsa/mldsa65.rs:387,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/dsa/ml_dsa/mldsa65.rs:387,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA010,low,src/hazardous/dsa/ml_dsa/mldsa87.rs:387,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/dsa/ml_dsa/mldsa87.rs:387,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA015,medium,src/hazardous/hash/blake3/cvstack.rs:158,TH,blake3 key words in crate-internal struct
+orion,f4b3db3,CA015,medium,src/hazardous/hash/blake3/cvstack.rs:165,TH,blake3 key words in crate-internal struct
+orion,f4b3db3,CA010,medium,src/hazardous/kem/ml_kem/internal/mod.rs:326,FP,public-material (ML-KEM encapsulation key)
+orion,f4b3db3,CA013,medium,src/hazardous/kem/ml_kem/internal/mod.rs:326,FP,public-material (ML-KEM encapsulation key)
+orion,f4b3db3,CA015,medium,src/hazardous/kem/ml_kem/internal/mod.rs:328,FP,public-material (ML-KEM encapsulation key)
+orion,f4b3db3,CA013,medium,src/hazardous/kem/ml_kem/internal/mod.rs:344,FP,public-material (ML-KEM encapsulation key)
+orion,f4b3db3,CA010,low,src/hazardous/kem/ml_kem/mlkem1024.rs:267,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/kem/ml_kem/mlkem1024.rs:267,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA010,low,src/hazardous/kem/ml_kem/mlkem512.rs:267,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/kem/ml_kem/mlkem512.rs:267,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA010,low,src/hazardous/kem/ml_kem/mlkem768.rs:267,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/kem/ml_kem/mlkem768.rs:267,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA010,low,src/hazardous/kem/x25519_hkdf_sha256.rs:189,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/kem/x25519_hkdf_sha256.rs:189,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA010,low,src/hazardous/kem/xwing.rs:351,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA013,low,src/hazardous/kem/xwing.rs:351,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA021,high,src/hazardous/mac/blake2b.rs:201,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA021,high,src/hazardous/mac/blake3.rs:227,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA021,medium,src/hazardous/mac/hmac.rs:390,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA021,medium,src/hazardous/mac/hmac.rs:738,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA021,medium,src/hazardous/mac/hmac.rs:1085,FP,"type-level-protection (orion tag/secret types compare in constant time, Debug redacted)"
+orion,f4b3db3,CA020,low,src/test_framework/aead_interface.rs:102,NP,test_framework helper module
+orion,f4b3db3,CA020,medium,src/test_framework/aead_interface.rs:110,NP,test_framework helper module
+orion,f4b3db3,CA020,low,src/test_framework/aead_interface.rs:185,NP,test_framework helper module
+orion,f4b3db3,CA020,medium,src/test_framework/aead_interface.rs:576,NP,test_framework helper module
+orion,f4b3db3,CA020,medium,src/test_framework/aead_interface.rs:586,NP,test_framework helper module
+orion,f4b3db3,CA020,medium,src/test_framework/aead_interface.rs:599,NP,test_framework helper module
+orion,f4b3db3,CA018,medium,src/test_framework/hpke_interface.rs:314,NP,test_framework helper module
+orion,f4b3db3,CA028,medium,src/test_framework/hpke_interface.rs:395,NP,test_framework helper module
+orion,f4b3db3,CA028,medium,src/test_framework/hpke_interface.rs:436,NP,test_framework helper module
+orion,f4b3db3,CA028,medium,src/test_framework/hpke_interface.rs:627,NP,test_framework helper module
+orion,f4b3db3,CA028,medium,src/test_framework/hpke_interface.rs:672,NP,test_framework helper module
+orion,f4b3db3,CA028,medium,src/test_framework/hpke_interface.rs:723,NP,test_framework helper module
+orion,f4b3db3,CA028,medium,src/test_framework/hpke_interface.rs:834,NP,test_framework helper module
+orion,f4b3db3,CA028,medium,src/test_framework/hpke_interface.rs:859,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:173,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:174,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:175,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:197,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:198,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:199,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:259,NP,test_framework helper module
+orion,f4b3db3,CA020,high,src/test_framework/incremental_interface.rs:270,NP,test_framework helper module
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/account/login.rs:20,TP,CLI password in Debug
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/account/register.rs:13,TP,CLI password in Debug
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/config.rs:57,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin/src/command/client/config.rs:58,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/config.rs:134,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin/src/command/client/config.rs:135,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/config.rs:500,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin/src/command/client/config.rs:501,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/doctor.rs:294,FP,non-secret-name
+atuin,3e1c10b,CA019,low,crates/atuin/src/command/client/doctor.rs:418,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/kv.rs:13,FP,non-secret-name
+atuin,3e1c10b,CA011,low,crates/atuin/src/command/client/search/inspector/browser.rs:383,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin/src/command/client/search.rs:33,FP,non-secret-name
+atuin,3e1c10b,CA021,low,crates/atuin/src/command/client/store/pull.rs:103,FP,non-secret-name
+atuin,3e1c10b,CA021,low,crates/atuin/src/command/client/store/push.rs:115,FP,non-secret-name
+atuin,3e1c10b,CA012,low,crates/atuin-ai/src/commands/session.rs:978,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-ai/src/context.rs:14,FP,type-level-protection (SecretString)
+atuin,3e1c10b,CA015,low,crates/atuin-ai/src/resume_tui/markdown.rs:276,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-ai/src/resume_tui/query.rs:43,FP,non-secret-name
+atuin,3e1c10b,CA013,low,crates/atuin-ai/src/resume_tui/query.rs:43,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-ai/src/tui/persist.rs:16,FP,non-secret-name
+atuin,3e1c10b,CA015,medium,crates/atuin-client/src/ai_session/database.rs:322,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-client/src/ai_session/store.rs:31,FP,type-level-protection
+atuin,3e1c10b,CA010,low,crates/atuin-client/src/history/store.rs:24,FP,type-level-protection (redacted Key Debug)
+atuin,3e1c10b,CA010,high,crates/atuin-client/src/import/resh.rs:17,FP,non-secret-name
+atuin,3e1c10b,CA015,medium,crates/atuin-client/src/import/resh.rs:19,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-client/src/settings.rs:470,FP,non-secret-name
+atuin,3e1c10b,CA012,low,crates/atuin-client/src/settings.rs:470,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin-client/src/settings.rs:471,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-client/src/settings.rs:481,FP,non-secret-name
+atuin,3e1c10b,CA012,low,crates/atuin-client/src/settings.rs:481,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-client/src/settings.rs:1057,FP,non-secret-name
+atuin,3e1c10b,CA012,low,crates/atuin-client/src/settings.rs:1057,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-client/src/tui/key.rs:7,FP,non-secret-name
+atuin,3e1c10b,CA013,low,crates/atuin-client/src/tui/key.rs:7,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-client/src/tui/key.rs:18,FP,non-secret-name
+atuin,3e1c10b,CA011,low,crates/atuin-client/src/tui/key.rs:18,FP,non-secret-name
+atuin,3e1c10b,CA013,low,crates/atuin-client/src/tui/key.rs:18,FP,non-secret-name
+atuin,3e1c10b,CA013,high,crates/atuin-common/src/encryption/paseto_v4.rs:124,TP,derive PartialEq on 32-byte key
+atuin,3e1c10b,CA010,high,crates/atuin-common/src/encryption/paseto_v4.rs:124,FP,type-level-protection (custom redacted Debug)
+atuin,3e1c10b,CA021,low,crates/atuin-common/src/harnesstools/opencode/session/v2.rs:120,FP,non-secret-name
+atuin,3e1c10b,CA021,low,crates/atuin-common/src/harnesstools/session/checkpoint.rs:72,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-common/src/harnesstools/session/model.rs:26,FP,non-secret-name
+atuin,3e1c10b,CA013,low,crates/atuin-common/src/harnesstools/session/model.rs:26,FP,non-secret-name
+atuin,3e1c10b,CA012,low,crates/atuin-common/src/harnesstools/session/model.rs:26,FP,non-secret-name
+atuin,3e1c10b,CA018,medium,crates/atuin-common/src/harnesstools/sync/pi/tests.rs:213,FP,`open` is not decrypt
+atuin,3e1c10b,CA010,low,crates/atuin-common/src/sync/sharded_mutex.rs:8,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-daemon/src/session_capture/policy.rs:34,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-domain/src/caps/mod.rs:66,FP,non-secret-name
+atuin,3e1c10b,CA013,low,crates/atuin-domain/src/caps/mod.rs:66,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin-domain/src/caps/mod.rs:67,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-domain/src/caps/server.rs:19,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin-domain/src/caps/server.rs:20,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-dotfiles/src/store/var.rs:96,FP,type-level-protection
+atuin,3e1c10b,CA010,low,crates/atuin-dotfiles/src/store.rs:118,FP,type-level-protection
+atuin,3e1c10b,CA010,low,crates/atuin-kv/src/store/entry.rs:1,FP,non-secret-name
+atuin,3e1c10b,CA013,low,crates/atuin-kv/src/store/entry.rs:1,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin-kv/src/store/entry.rs:2,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-kv/src/store/record.rs:7,FP,non-secret-name
+atuin,3e1c10b,CA013,low,crates/atuin-kv/src/store/record.rs:7,FP,non-secret-name
+atuin,3e1c10b,CA015,low,crates/atuin-kv/src/store/record.rs:8,FP,non-secret-name
+atuin,3e1c10b,CA010,low,crates/atuin-kv/src/store.rs:17,FP,type-level-protection
+atuin,3e1c10b,CA010,low,crates/atuin-scripts/src/store.rs:15,FP,type-level-protection
+atuin,3e1c10b,CA015,medium,crates/atuin-server/src/db/models.rs:9,FP,"password hash, not the password"
+atuin,3e1c10b,CA015,medium,crates/atuin-server/src/db/models.rs:24,FP,"password hash, not the password"

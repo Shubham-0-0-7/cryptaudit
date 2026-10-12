@@ -1,0 +1,106 @@
+id,repo,commit,rule,confidence,location,label,reason
+0,libsignal,4beb029,CA010,high,rust/message-backup/src/backup/sticker.rs:39,TP,
+1,sdk-internal,7d5b101,CA010,high,crates/bitwarden-api-identity/src/models/signature_key_pair_request_model.rs:15,FP,"encrypted or public material, generated API model"
+2,kanidm,3331b8e,CA010,high,proto/src/oauth2.rs:359,TP,
+3,sdk-internal,7d5b101,CA010,high,crates/bitwarden-auth/src/registration/post_keys_for_jit_password_registration.rs:20,TP,
+4,sdk-internal,7d5b101,CA010,high,crates/bitwarden-api-api/src/models/web_authn_login_credential_create_request_model.rs:15,FP,"encrypted or public material, generated API model"
+5,sdk-internal,7d5b101,CA010,high,crates/bitwarden-exporters/src/lib.rs:83,FP,derive only under cfg_attr(test)
+6,sdk-internal,7d5b101,CA010,high,crates/bw/src/tools/send.rs:200,TP,
+7,libsignal,4beb029,CA010,high,rust/net/chat/src/grpc/accounts.rs:92,FP,derive only under cfg_attr(test)
+8,sdk-internal,7d5b101,CA010,high,crates/bitwarden-test/src/play/scenes/single_user.rs:10,NP,"test, bench or testing-support code"
+9,librespot,4a00590,CA010,high,oauth/src/lib.rs:163,TP,
+10,kanidm,3331b8e,CA010,high,server/lib/src/idm/radius.rs:13,TP,
+11,sdk-internal,7d5b101,CA010,high,crates/bitwarden-auth/src/login/models/login_success_response.rs:20,TP,
+12,ring,840167e,CA011,high,src/aead/chacha20_poly1305/integrated.rs:82,FP,FFI/asm struct layout
+13,libsignal,4beb029,CA011,high,rust/message-backup/src/backup/sticker.rs:39,TP,
+14,libsignal,4beb029,CA011,high,rust/protocol/src/ratchet/keys.rs:91,TP,
+15,libsignal,4beb029,CA011,high,rust/core/src/curve.rs:231,TP,
+16,ring,840167e,CA011,high,src/aead/chacha20_poly1305/integrated.rs:157,FP,FFI/asm struct layout
+17,librespot,4a00590,CA011,high,core/src/audio_key.rs:10,TP,
+18,rust-secp256k1,b7a6ff7,CA011,high,src/secret.rs:62,TP,
+19,libsignal,4beb029,CA011,high,rust/zkgroup/src/api/groups/group_params.rs:19,TP,
+20,libsignal,4beb029,CA011,high,rust/account-keys/src/backup.rs:194,TP,
+21,rust-secp256k1,b7a6ff7,CA011,high,src/key/secret.rs:51,TP,
+22,rust-secp256k1,b7a6ff7,CA011,high,src/ellswift.rs:281,TP,
+23,rust-secp256k1,b7a6ff7,CA011,high,src/ecdh.rs:32,TP,
+24,kanidm,3331b8e,CA012,high,unix_integration/common/src/unix_passwd.rs:298,FP,unix group password field is a placeholder
+25,sdk-internal,7d5b101,CA012,high,crates/bitwarden-core/src/client/login_method.rs:21,TP,
+26,sdk-internal,7d5b101,CA012,high,crates/bitwarden-auth/src/login/api/response/login_success_api_response.rs:9,TP,
+27,sdk-internal,7d5b101,CA012,high,crates/bitwarden-api-api/src/models/account_keys_request_model.rs:15,FP,"encrypted/wrapped/hashed value, generated API model"
+28,sdk-internal,7d5b101,CA012,high,crates/bitwarden-api-api/src/models/key_regeneration_request_model.rs:15,FP,"encrypted/wrapped/hashed value, generated API model"
+29,sdk-internal,7d5b101,CA012,high,crates/bitwarden-auth/src/registration/open_org_invite_crypto/open_org_invite.rs:26,FP,serialising the value is the type's purpose
+30,kanidm,3331b8e,CA012,medium,server/lib/src/idm/oauth2.rs:217,FP,public protocol value or credential names
+31,sdk-internal,7d5b101,CA012,high,crates/bitwarden-exporters/src/lib.rs:34,FP,serialising the value is the type's purpose
+32,sdk-internal,7d5b101,CA012,high,crates/bitwarden-auth/src/registration/open_org_invite_crypto/data_v1.rs:13,FP,serialising the value is the type's purpose
+33,sdk-internal,7d5b101,CA012,high,crates/bitwarden-core/src/auth/api/response/identity_payload_response.rs:3,TP,
+34,sdk-internal,7d5b101,CA012,high,crates/bitwarden-auth/src/registration/post_keys_for_jit_password_registration.rs:20,FP,serialising the value is the type's purpose
+35,sdk-internal,7d5b101,CA012,high,crates/bitwarden-exporters/src/json.rs:188,FP,serialising the value is the type's purpose
+36,kanidm,3331b8e,CA013,high,unix_integration/common/src/unix_passwd.rs:158,FP,"password hash, not the password"
+37,sdk-internal,7d5b101,CA013,high,crates/bitwarden-api-identity/src/models/signature_key_pair_request_model.rs:15,FP,"encrypted/wrapped/hashed value, generated API model"
+38,sdk-internal,7d5b101,CA013,high,crates/bitwarden-api-api/src/models/password_request_model.rs:15,FP,"encrypted/wrapped/hashed value, generated API model"
+39,sdk-internal,7d5b101,CA013,high,crates/bitwarden-send/src/send.rs:163,TP,
+40,kanidm,3331b8e,CA013,medium,proto/src/internal/credupdate.rs:220,FP,public protocol value or credential names
+41,libsignal,4beb029,CA013,high,rust/net/chat/src/api.rs:214,FP,derive only under cfg_attr(test)
+42,rpgp,136e5c8,CA013,high,src/types/params/encrypted_secret.rs:18,FP,ciphertext
+43,sdk-internal,7d5b101,CA013,high,crates/bitwarden-vault/src/password_history.rs:28,TP,
+44,sdk-internal,7d5b101,CA013,high,crates/bitwarden-api-api/src/models/send_with_id_request_model.rs:16,TP,
+45,kanidm,3331b8e,CA013,high,proto/src/internal/token.rs:159,FP,"compares token_id, not the secret"
+46,sdk-internal,7d5b101,CA013,high,crates/bitwarden-api-api/src/models/organization_report_summary_data_response.rs:15,FP,"encrypted/wrapped/hashed value, generated API model"
+47,sdk-internal,7d5b101,CA013,high,crates/bitwarden-api-api/src/models/two_factor_duo_update_request_model.rs:15,TP,
+48,libsignal,4beb029,CA015,medium,rust/bridge/shared/testing/src/net/chat.rs:1076,NP,"test, bench or testing-support code"
+49,sdk-internal,7d5b101,CA015,medium,crates/bitwarden-vault/src/totp.rs:155,TH,
+50,libsignal,4beb029,CA015,medium,rust/account-keys/src/backup.rs:41,TH,
+51,libsignal,4beb029,CA015,medium,rust/protocol/src/pqxdh.rs:198,TH,
+52,sdk-internal,7d5b101,CA015,medium,crates/bw/src/tools/send.rs:821,TH,
+53,libsignal,4beb029,CA015,medium,rust/message-backup/src/backup/file.rs:26,TH,
+54,sdk-internal,7d5b101,CA015,medium,crates/bitwarden-api-api/src/models/device_keys_request_model.rs:16,FP,"encrypted/wrapped/hashed value, generated API model"
+55,sdk-internal,7d5b101,CA015,medium,crates/bitwarden-api-api/src/models/organization_user.rs:19,FP,"encrypted/wrapped/hashed value, generated API model"
+56,sdk-internal,7d5b101,CA015,medium,crates/bitwarden-api-api/src/models/organization_user_reset_password_enrollment_request_model.rs:16,FP,"encrypted/wrapped/hashed value, generated API model"
+57,sdk-internal,7d5b101,CA015,medium,crates/bitwarden-core/src/platform/get_user_api_key.rs:102,TH,
+58,sdk-internal,7d5b101,CA015,medium,crates/bitwarden-vault/src/cipher_risk/types.rs:27,TH,
+59,sdk-internal,7d5b101,CA015,medium,crates/bitwarden-exporters/src/json.rs:122,TH,
+60,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:55,NP,"test, bench or testing-support code"
+61,ring,840167e,CA018,medium,bench/ecdsa.rs:64,NP,"test, bench or testing-support code"
+62,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:118,NP,"test, bench or testing-support code"
+63,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:529,NP,"test, bench or testing-support code"
+64,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:215,NP,"test, bench or testing-support code"
+65,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:432,NP,"test, bench or testing-support code"
+66,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:99,NP,"test, bench or testing-support code"
+67,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:386,NP,"test, bench or testing-support code"
+68,ring,840167e,CA018,medium,bench/rsa.rs:72,NP,"test, bench or testing-support code"
+69,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:75,NP,"test, bench or testing-support code"
+70,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:283,NP,"test, bench or testing-support code"
+71,libsignal,4beb029,CA018,medium,rust/zkgroup/src/crypto/zkcredential_examples.rs:143,NP,"test, bench or testing-support code"
+72,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1105,TP,
+73,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1143,TP,
+74,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1092,TP,
+75,rpgp,136e5c8,CA021,medium,src/parsing_reader.rs:144,FP,"packet tag, not a MAC"
+76,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1099,TP,
+77,libsignal,4beb029,CA021,high,rust/attest/src/dcap/sgx_quote.rs:292,FP,public attestation digest
+78,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1118,TP,
+79,kanidm,3331b8e,CA021,medium,libs/crypto/src/lib.rs:992,TP,
+80,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1112,TP,
+81,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1139,TP,
+82,kanidm,3331b8e,CA021,high,libs/crypto/src/lib.rs:1125,TP,
+83,libsignal,4beb029,CA027,medium,rust/poksho/src/statement.rs:187,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+84,libsignal,4beb029,CA027,high,rust/poksho/src/shohmacsha256.rs:33,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+85,libsignal,4beb029,CA027,medium,rust/zkcredential/src/endorsements.rs:409,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+86,libsignal,4beb029,CA027,medium,rust/zkcredential/src/issuance/blind.rs:454,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+87,libsignal,4beb029,CA027,high,rust/protocol/src/crypto.rs:35,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+88,librespot,4a00590,CA027,medium,audio/src/decrypt.rs:22,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+89,libsignal,4beb029,CA027,medium,rust/zkcredential/src/presentation.rs:529,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+90,libsignal,4beb029,CA027,medium,rust/zkgroup/src/api/avatars/avatar_upload_credential.rs:311,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+91,libsignal,4beb029,CA027,medium,rust/zkgroup/src/api/donations/donation_permit.rs:135,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+92,libsignal,4beb029,CA027,medium,rust/keytrans/src/commitments.rs:22,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+93,libsignal,4beb029,CA027,medium,rust/zkcredential/src/credentials.rs:136,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+94,libsignal,4beb029,CA027,medium,rust/zkgroup/src/api/donations/donation_permit.rs:67,FP,"domain-separation label or protocol-fixed key/IV, not a secret key"
+95,sdk-internal,7d5b101,CA028,medium,crates/bitwarden-send/src/send.rs:297,FP,"first argument is a context, not a nonce"
+96,sdk-internal,7d5b101,CA028,medium,crates/bitwarden-crypto/src/traits/encryptable.rs:203,FP,"first argument is a context, not a nonce"
+97,ring,840167e,CA028,medium,bench/aead.rs:131,NP,"test, bench or testing-support code"
+98,sdk-internal,7d5b101,CA028,medium,crates/bitwarden-crypto/src/traits/encryptable.rs:122,FP,"first argument is a context, not a nonce"
+99,sdk-internal,7d5b101,CA028,medium,crates/bitwarden-crypto/src/traits/encryptable.rs:222,FP,"first argument is a context, not a nonce"
+100,sdk-internal,7d5b101,CA028,medium,crates/bitwarden-vault/src/cipher/login.rs:232,FP,"first argument is a context, not a nonce"
+101,sdk-internal,7d5b101,CA028,medium,crates/bitwarden-send/src/create.rs:103,FP,"first argument is a context, not a nonce"
+102,sdk-internal,7d5b101,CA028,medium,crates/bitwarden-send/src/edit.rs:160,FP,"first argument is a context, not a nonce"
+103,ring,840167e,CA028,medium,src/aead/aes/fallback.rs:813,FP,"first argument is a context, not a nonce"
+104,libsignal,4beb029,CA071,medium,rust/message-backup/src/scramble.rs:34,FP,deterministic by design (scrambling backups)
