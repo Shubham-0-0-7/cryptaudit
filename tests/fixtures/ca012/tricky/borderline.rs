@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 // `skip_deserializing` does not stop serialisation.
-#[derive(Serialize)] // expect: CA012 high
+#[derive(Serialize)] // expect: CA012 low
 struct Config {
     #[serde(skip_deserializing)]
     api_key: String,

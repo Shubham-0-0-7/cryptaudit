@@ -14,6 +14,7 @@ fn verify(key: &[u8], msg: &[u8], expected: &[u8]) -> bool {\n\
     let mut mac = Hmac::<Sha256>::new_from_slice(key).unwrap();\n\
     mac.update(msg);\n\
     mac.finalize().into_bytes().as_slice() == expected\n}\n";
+const CT_TYPE_EQUAL_CT: &str = "impl PartialEq for Tag {\n    fn eq(&self, other: &Self) -> bool {\n        equal_ct(&self.0, &other.0)\n    }\n}\n";
 const CT_TYPE: &str = "impl PartialEq for Tag {\n    fn eq(&self, other: &Self) -> bool {\n        self.0.ct_eq(&other.0).into()\n    }\n}\n";
 
 fn confidences(name: &str, files: &[(&str, &str)]) -> Vec<String> {
@@ -49,6 +50,12 @@ fn tag_compare_is_reported_without_a_constant_time_type() {
 #[test]
 fn tag_compare_is_low_when_the_crate_defines_constant_time_eq() {
     let got = confidences("ct", &[("lib.rs", COMPARE), ("tag.rs", CT_TYPE)]);
+    assert_eq!(got, ["low"]);
+}
+
+#[test]
+fn constant_time_helper_with_another_name_counts() {
+    let got = confidences("ct2", &[("lib.rs", COMPARE), ("tag.rs", CT_TYPE_EQUAL_CT)]);
     assert_eq!(got, ["low"]);
 }
 
@@ -91,4 +98,40 @@ fn out_of_line_test_modules_and_generated_files_are_skipped() {
         .map(|f| f.path.file_name().unwrap().to_string_lossy().into_owned())
         .collect();
     assert_eq!(paths, ["real.rs"]);
+}
+
+#[test]
+fn test_support_directories_and_files_are_skipped() {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("ctx")
+        .join("testwords");
+    let _ = std::fs::remove_dir_all(&dir);
+    for sub in ["src/tests_and_kats", "src/test_utils", "src/latest"] {
+        std::fs::create_dir_all(dir.join(sub)).unwrap();
+    }
+    for file in [
+        "src/tests_and_kats/a.rs",
+        "src/test_utils/b.rs",
+        "src/benchmark.rs",
+        "src/interop_test_vectors.rs",
+        "src/latest/c.rs",
+        "src/real.rs",
+    ] {
+        std::fs::write(dir.join(file), RAW).unwrap();
+    }
+    let report = scan(
+        &dir,
+        &ScanOptions {
+            include_tests: false,
+            config: None,
+            suppress: false,
+        },
+    );
+    let mut paths: Vec<_> = report
+        .findings
+        .iter()
+        .map(|f| f.path.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    paths.sort();
+    assert_eq!(paths, ["c.rs", "real.rs"]);
 }

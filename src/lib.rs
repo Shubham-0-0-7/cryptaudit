@@ -69,7 +69,7 @@ pub fn scan(root: &Path, opts: &ScanOptions) -> ScanReport {
     }
     let ct_partialeq = sources
         .iter()
-        .any(|(_, s)| s.contains("fn eq") && s.contains("ct_eq"));
+        .any(|(_, s)| s.contains("fn eq") && secret::has_constant_time_call(s));
     for (display, source) in sources {
         match ParsedFile::parse(display.clone(), source, opts.include_tests) {
             Ok(mut file) => {
@@ -110,6 +110,28 @@ pub fn check_file(file: &ParsedFile, rules: &[Box<dyn rules::Rule>]) -> Vec<Find
 
 const TEST_DIRS: &[&str] = &["tests", "benches", "bench", "examples"];
 
+/// Words that mark a directory or file as test, fuzz or benchmark support:
+/// `tests_and_kats/`, `test_utils/`, `interop_test_vectors.rs`, `benchmark.rs`.
+const TEST_WORDS: &[&str] = &[
+    "test",
+    "tests",
+    "testing",
+    "kat",
+    "kats",
+    "fuzz",
+    "bench",
+    "benches",
+    "benchmark",
+    "benchmarks",
+];
+
+fn is_test_support_name(name: &str) -> bool {
+    let stem = name.strip_suffix(".rs").unwrap_or(name);
+    secret::words(stem)
+        .iter()
+        .any(|w| TEST_WORDS.contains(&w.as_str()))
+}
+
 /// Lists `.rs` files under `root`, honouring `.gitignore` and skipping `target/`.
 fn discover(root: &Path, include_tests: bool) -> Vec<PathBuf> {
     if root.is_file() {
@@ -122,7 +144,9 @@ fn discover(root: &Path, include_tests: bool) -> Vec<PathBuf> {
                 return true;
             }
             let name = entry.file_name().to_string_lossy();
-            name != "target" && (include_tests || !TEST_DIRS.contains(&name.as_ref()))
+            name != "target"
+                && (include_tests
+                    || !(TEST_DIRS.contains(&name.as_ref()) || is_test_support_name(&name)))
         })
         .build();
     let mut files: Vec<PathBuf> = walker
@@ -135,7 +159,7 @@ fn discover(root: &Path, include_tests: bool) -> Vec<PathBuf> {
             include_tests
                 || !p
                     .file_name()
-                    .is_some_and(|n| n == "tests.rs" || n == "test.rs")
+                    .is_some_and(|n| is_test_support_name(&n.to_string_lossy()))
         })
         .collect();
     files.sort();

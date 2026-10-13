@@ -121,6 +121,7 @@ impl Rule for ManualZeroing {
         let mut v = ManualVisitor {
             file,
             zeroized: HashSet::new(),
+            idents: HashMap::new(),
             out: Vec::new(),
         };
         v.visit_file(&file.ast);
@@ -456,7 +457,25 @@ struct ManualVisitor<'a> {
     file: &'a ParsedFile,
     /// Variables this function wipes with `.zeroize()`.
     zeroized: HashSet<String>,
+    /// Where every identifier of the current function appears (line, column).
+    idents: HashMap<String, Vec<(usize, usize)>>,
     out: Vec<Finding>,
+}
+
+/// Records the position of every identifier in a function.
+#[derive(Default)]
+struct IdentPositions {
+    at: HashMap<String, Vec<(usize, usize)>>,
+}
+
+impl<'ast> Visit<'ast> for IdentPositions {
+    fn visit_ident(&mut self, i: &'ast syn::Ident) {
+        let start = i.span().start();
+        self.at
+            .entry(i.to_string())
+            .or_default()
+            .push((start.line, start.column));
+    }
 }
 
 /// The last component of a variable path: `self.key` -> `key`.
@@ -509,10 +528,20 @@ impl ManualVisitor<'_> {
         }
     }
 
-    fn report(&mut self, var: &str, span: Span, how: &str) {
+    /// `wiped` is the whole wiping expression. If the variable is mentioned
+    /// again after it, the buffer is still in use and the stores are not dead.
+    fn report(&mut self, var: &str, span: Span, wiped: Span, how: &str) {
         let Some(confidence) = self.secret(var) else {
             return;
         };
+        let end = wiped.end();
+        let used_later = self
+            .idents
+            .get(leaf(var))
+            .is_some_and(|at| at.iter().any(|&p| p > (end.line, end.column)));
+        if used_later {
+            return;
+        }
         self.out.push(self.file.finding(
             &MANUAL_META,
             confidence,
@@ -524,10 +553,17 @@ impl ManualVisitor<'_> {
         ));
     }
 
-    fn with_zeroized(&mut self, vars: HashSet<String>, walk: impl FnOnce(&mut Self)) {
+    fn with_zeroized(
+        &mut self,
+        vars: HashSet<String>,
+        idents: HashMap<String, Vec<(usize, usize)>>,
+        walk: impl FnOnce(&mut Self),
+    ) {
         let saved = std::mem::replace(&mut self.zeroized, vars);
+        let saved_idents = std::mem::replace(&mut self.idents, idents);
         walk(self);
         self.zeroized = saved;
+        self.idents = saved_idents;
     }
 }
 
@@ -535,13 +571,17 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
     fn visit_item_fn(&mut self, f: &'ast ItemFn) {
         let mut calls = ZeroizeCalls::default();
         calls.visit_item_fn(f);
-        self.with_zeroized(calls.vars, |s| visit::visit_item_fn(s, f));
+        let mut pos = IdentPositions::default();
+        pos.visit_item_fn(f);
+        self.with_zeroized(calls.vars, pos.at, |s| visit::visit_item_fn(s, f));
     }
 
     fn visit_impl_item_fn(&mut self, f: &'ast syn::ImplItemFn) {
         let mut calls = ZeroizeCalls::default();
         calls.visit_impl_item_fn(f);
-        self.with_zeroized(calls.vars, |s| visit::visit_impl_item_fn(s, f));
+        let mut pos = IdentPositions::default();
+        pos.visit_impl_item_fn(f);
+        self.with_zeroized(calls.vars, pos.at, |s| visit::visit_impl_item_fn(s, f));
     }
 
     fn visit_expr_method_call(&mut self, c: &'ast ExprMethodCall) {
@@ -549,7 +589,7 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
         // `key.fill(0)`
         if method == "fill" && c.args.first().is_some_and(is_zero) {
             if let Some(var) = root_var(&c.receiver) {
-                self.report(&var, c.method.span(), "`.fill(0)`");
+                self.report(&var, c.method.span(), c.span(), "`.fill(0)`");
             }
         }
         // `key.copy_from_slice(&[0u8; 32])`
@@ -557,7 +597,12 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
             && c.args.first().is_some_and(is_zero_array)
         {
             if let Some(var) = root_var(&c.receiver) {
-                self.report(&var, c.method.span(), "`copy_from_slice` of zeros");
+                self.report(
+                    &var,
+                    c.method.span(),
+                    c.span(),
+                    "`copy_from_slice` of zeros",
+                );
             }
         }
         // `key.iter_mut().for_each(|b| *b = 0)`
@@ -568,7 +613,12 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
                         (root_var(&inner.receiver), c.args.first())
                     {
                         if stores_zero(&cl.body) {
-                            self.report(&var, c.method.span(), "`iter_mut().for_each(|b| *b = 0)`");
+                            self.report(
+                                &var,
+                                c.method.span(),
+                                c.span(),
+                                "`iter_mut().for_each(|b| *b = 0)`",
+                            );
                         }
                     }
                 }
@@ -582,7 +632,7 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
         if is_zero_array(&e.right) {
             if let Expr::Path(_) | Expr::Field(_) = &*e.left {
                 if let Some(var) = root_var(&e.left) {
-                    self.report(&var, e.left.span(), "an assignment of zeros");
+                    self.report(&var, e.left.span(), e.span(), "an assignment of zeros");
                 }
             }
         }
@@ -603,6 +653,7 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
                 self.report(
                     &var,
                     e.for_token.span,
+                    e.span(),
                     "a loop that stores `0` into each byte",
                 );
             }
@@ -612,6 +663,7 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
             self.report(
                 &var,
                 e.for_token.span,
+                e.span(),
                 "a loop that stores `0` into each byte",
             );
         }
@@ -631,7 +683,7 @@ impl<'ast> Visit<'ast> for ManualVisitor<'_> {
                     Expr::MethodCall(m) => root_var(&m.receiver),
                     other => root_var(other),
                 }) {
-                    self.report(&var, f.span(), "`ptr::write_bytes`");
+                    self.report(&var, f.span(), c.span(), "`ptr::write_bytes`");
                 }
             }
         }

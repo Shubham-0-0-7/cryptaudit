@@ -14,7 +14,7 @@ use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::secret::{
     Strength, TypeClass, classify_name, classify_type, is_ciphertext_name, is_excluded,
-    is_public_name,
+    is_public_name, is_size_name,
 };
 use crate::source::ParsedFile;
 
@@ -307,6 +307,9 @@ pub(super) fn field_confidence(
             if is_excluded(&n) || is_ciphertext_name(&n) {
                 return None;
             }
+            if class == Int && is_size_name(&n) {
+                return None;
+            }
             classify_name(&n)
         }
         None => None,
@@ -327,6 +330,7 @@ pub(super) fn field_confidence(
             (Some(Strong), Str | Int) => Some(Medium),
             (Some(Weak), Bytes) if name.is_none() => Some(High),
             (Some(Weak), Bytes) => Some(Medium),
+            (Some(Weak), Int) if name.is_some() => None,
             (Some(Weak), Str | Int) => Some(Low),
             _ => None,
         },
