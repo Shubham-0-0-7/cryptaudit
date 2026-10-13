@@ -32,12 +32,19 @@ const STRONG: &[&str] = &[
     "passphrase",
     "mnemonic",
     "apikey",
-    "credential",
-    "credentials",
 ];
 
 /// Words that are secret in crypto code but have common benign uses.
-const WEAK: &[&str] = &["key", "keys", "token", "tokens", "keypair"];
+const WEAK: &[&str] = &[
+    "key",
+    "keys",
+    "token",
+    "tokens",
+    "keypair",
+    // Often a public identity (MLS, WebAuthn), so only a hint.
+    "credential",
+    "credentials",
+];
 
 /// Words that upgrade a weak word to strong: `api_key`, `signing_key`, `access_token`.
 const QUALIFIERS: &[&str] = &[
@@ -171,6 +178,31 @@ pub fn is_ciphertext_name(name: &str) -> bool {
     words(name)
         .iter()
         .any(|w| matches!(w.as_str(), "encrypted" | "wrapped"))
+}
+
+/// True if the source calls a constant-time comparison under any common name
+/// (`ct_eq`, `equal_ct`, `ct_equal`, `constant_time_eq`, `ConstantTimeEq`).
+pub fn has_constant_time_call(source: &str) -> bool {
+    [
+        "ct_eq",
+        "equal_ct",
+        "ct_equal",
+        "constant_time",
+        "ConstantTimeEq",
+    ]
+    .iter()
+    .any(|n| source.contains(n))
+}
+
+/// True if an integer field name says it is a size or a count: `sk_bytes`,
+/// `n_secret`. Such a value describes a secret without being one.
+pub fn is_size_name(name: &str) -> bool {
+    words(name).iter().any(|w| {
+        matches!(
+            w.as_str(),
+            "n" | "num" | "bytes" | "byte" | "max" | "min" | "limit"
+        )
+    })
 }
 
 /// True if a type name says it holds public material: `PublicKey`, `VerifyingKey`.
@@ -352,7 +384,7 @@ mod tests {
             ("client_secret", Some(Strong)), ("SecretKey", Some(Strong)), ("secret_key", Some(Strong)),
             ("private_key", Some(Strong)), ("PrivateKey", Some(Strong)), ("privkey", Some(Strong)),
             ("sk", Some(Strong)), ("seed", Some(Strong)), ("rng_seed", Some(Strong)),
-            ("mnemonic", Some(Strong)), ("credentials", Some(Strong)), ("StaticSecret", Some(Strong)),
+            ("mnemonic", Some(Strong)), ("credentials", Some(Weak)), ("StaticSecret", Some(Strong)),
             // Weak words, upgraded by a qualifier.
             ("api_key", Some(Strong)), ("apiKey", Some(Strong)), ("signing_key", Some(Strong)),
             ("SigningKey", Some(Strong)), ("session_key", Some(Strong)), ("hmac_key", Some(Strong)),

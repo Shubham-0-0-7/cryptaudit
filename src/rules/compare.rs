@@ -185,7 +185,13 @@ fn evidence(expr: &Expr, env: &Env) -> Option<Evidence> {
         Expr::MethodCall(c) => {
             let method = c.method.to_string();
             if API_METHODS.contains(&method.as_str()) {
-                Some(Evidence::Api)
+                // `sha.finalize()` is an unkeyed hash of data the attacker may
+                // already know, not a MAC.
+                if is_unkeyed_hasher(&c.receiver) {
+                    Some(Evidence::Weak)
+                } else {
+                    Some(Evidence::Api)
+                }
             } else if PASS_THROUGH.contains(&method.as_str()) {
                 evidence(&c.receiver, env)
             } else if ENCODERS.contains(&method.as_str()) {
@@ -214,6 +220,28 @@ fn evidence(expr: &Expr, env: &Env) -> Option<Evidence> {
             }
         }
         _ => None,
+    }
+}
+
+/// `self.sha`: a hash state kept in a struct field, fed with data as it streams
+/// past (a downloaded file, an attachment). A local `hasher` is not covered: it
+/// is often fed a password, and comparing that hash is a real timing leak.
+fn is_unkeyed_hasher(receiver: &Expr) -> bool {
+    match receiver {
+        Expr::Field(f) => match &f.member {
+            syn::Member::Named(n) => {
+                let ws = words(&n.to_string());
+                let has = |list: &[&str]| ws.iter().any(|w| list.contains(&w.as_str()));
+                has(&[
+                    "sha", "sha1", "sha2", "sha3", "sha256", "sha512", "md5", "blake", "blake2",
+                    "blake3",
+                ]) && !has(&["mac", "hmac", "cmac"])
+            }
+            syn::Member::Unnamed(_) => false,
+        },
+        Expr::Reference(r) => is_unkeyed_hasher(&r.expr),
+        Expr::Paren(p) => is_unkeyed_hasher(&p.expr),
+        _ => false,
     }
 }
 

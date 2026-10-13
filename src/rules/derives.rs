@@ -55,6 +55,11 @@ Fix: `#[serde(skip)]` on the secret field, or a newtype with a redacting
 `Serialize` impl. Fields with `skip`, `skip_serializing`, `serialize_with`
 or `with` are not reported.
 
+Confidence: high when the type is itself named like a secret (`SessionKey`,
+`StaticSecret`); low when it is an ordinary record that has a secret-named
+field (`Config { api_key }`), because most such records exist to be
+serialised. Low findings are hidden unless `--min-confidence low` is given.
+
 False positives: a type that is meant to be written to an encrypted
 keystore or config file on purpose. Suppress those with a comment saying why.
 ",
@@ -159,7 +164,14 @@ impl Rule for DeriveRule {
 
         let mut out = Vec::new();
         for hit in derive_hits(&items, self.derive, self.skip) {
-            if let Some(confidence) = hit.confidence() {
+            if let Some(mut confidence) = hit.confidence() {
+                // A record that merely holds secret-named fields (a request, a
+                // config, a stored session) exists to be serialised. Only a type
+                // that is itself named like a secret (`StaticSecret`, `Password`)
+                // is a clear leak.
+                if self.derive == "Serialize" && classify_name(&hit.ty).is_none() {
+                    confidence = confidence.min(Confidence::Low);
+                }
                 let message = (self.message)(&hit);
                 out.push(file.finding(self.meta, confidence, hit.span, message, self.help));
             }
@@ -202,10 +214,7 @@ impl DeriveRule {
 
         // A constant-time comparison anywhere in the impl clears it.
         let body = imp.to_token_stream().to_string();
-        if body.contains("ct_eq")
-            || body.contains("ConstantTimeEq")
-            || body.contains("constant_time")
-        {
+        if crate::secret::has_constant_time_call(&body) {
             return None;
         }
 

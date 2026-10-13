@@ -116,7 +116,23 @@ const NOT_NONCES: &[&str] = &[
     "buf",
     "input",
     "from",
+    "crypto",
+    "provider",
+    "backend",
+    "rng",
+    "ciphersuite",
+    "event_type",
 ];
+
+fn is_empty_or_text_literal(expr: &Expr) -> bool {
+    match expr {
+        Expr::Reference(e) => is_empty_or_text_literal(&e.expr),
+        Expr::Paren(e) => is_empty_or_text_literal(&e.expr),
+        Expr::Array(a) => a.elems.is_empty(),
+        Expr::Lit(l) => matches!(l.lit, syn::Lit::Str(_)),
+        _ => false,
+    }
+}
 
 /// Methods that read a value without changing it.
 const READ_ONLY: &[&str] = &[
@@ -337,6 +353,11 @@ impl Visitor<'_> {
         let span = call.method.span();
         let receiver = call.receiver.to_token_stream().to_string();
         let nonce_arg = &call.args[0];
+        // `ff1.encrypt(&[], ..)` has no tweak, and a text literal is a label
+        // (`encrypt("m.dummy", ..)`): neither is a nonce.
+        if is_empty_or_text_literal(nonce_arg) {
+            return;
+        }
         // `value.encrypt(ctx, key)`: a key-store context, not a nonce.
         if let Expr::Path(p) = nonce_arg {
             if p.path

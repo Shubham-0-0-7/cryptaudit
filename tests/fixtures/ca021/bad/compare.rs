@@ -35,3 +35,11 @@ fn in_assert(computed_mac: &[u8], stored_mac: &[u8]) {
 fn field(msg: &Message, computed: &[u8]) -> bool {
     computed == msg.mac // expect: CA021 medium
 }
+
+// A local hasher fed a password: comparing the digest is a real timing leak.
+fn verify_password(cleartext: &str, stored: &[u8]) -> bool {
+    let mut hasher = Sha1::new();
+    hasher.update(cleartext.as_bytes());
+    let r = hasher.finalize();
+    r.as_slice() == stored // expect: CA021 high
+}

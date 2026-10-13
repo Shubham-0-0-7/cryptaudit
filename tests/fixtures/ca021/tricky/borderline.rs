@@ -18,3 +18,9 @@ fn checksum(file_digest: &[u8], expected: &[u8]) -> bool {
 fn mac_address(mac: [u8; 6], other: [u8; 6]) -> bool {
     mac == other // expect: CA021 medium
 }
+
+// An unkeyed hash of public data (a file or attachment hash) is not a MAC.
+fn attachment(reader: &mut Reader, expected_hash: &[u8]) -> bool {
+    let hash = reader.sha.finalize_reset();
+    hash.as_slice() == expected_hash
+}

@@ -9,3 +9,4 @@ expression: snap
 28:54 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
 32:26 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
 36:14 CA021 [high/medium] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+44:18 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
