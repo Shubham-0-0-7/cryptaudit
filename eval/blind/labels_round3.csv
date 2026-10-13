@@ -1,0 +1,65 @@
+id,repo,commit,rule,confidence,location,label,reason
+0,signatures,a840817,CA010,high,slh-dsa/src/fors.rs:6,TP,
+1,mls-rs,d4c5b19,CA010,high,mls-rs-crypto-hpke/src/dhkem.rs:39,FP,usize length and test-only field
+2,openmls,8ee6b40,CA010,high,openmls/src/group/mls_group/mod.rs:123,FP,public key and credential
+3,signatures,a840817,CA010,high,slh-dsa/src/signing_key.rs:49,TP,
+4,matrix-rust-sdk,1f5be00,CA010,high,crates/matrix-sdk-sqlite/src/utils.rs:41,FP,"storage lookup key, not a secret"
+5,openmls,8ee6b40,CA010,high,openmls/src/tree/tests_and_kats/kats/kat_encryption.rs:133,NP,test vector / test-support code
+6,openmls,8ee6b40,CA010,high,openmls/src/ciphersuite/tests_and_kats/kat_crypto_basics.rs:118,NP,test vector / test-support code
+7,vaultwarden,6489552,CA010,high,src/api/core/accounts.rs:105,TH,tokens and hint in Debug of a request struct
+8,openmls,8ee6b40,CA010,high,openmls/src/group/tests_and_kats/kats/transcript_hashes.rs:50,NP,test vector / test-support code
+9,openmls,8ee6b40,CA010,high,openmls/src/ciphersuite/tests_and_kats/kat_crypto_basics.rs:110,NP,test vector / test-support code
+10,SSH,9510a65,CA010,high,ssh-key/src/private/sk.rs:110,FP,FIDO key handle is an opaque identifier
+11,openmls,8ee6b40,CA010,high,openmls/src/test_utils/frankenstein/leaf_node.rs:226,FP,credential type ids
+12,signatures,a840817,CA011,high,xmss/src/params.rs:898,FP,sk_bytes is a length
+13,mls-rs,d4c5b19,CA012,high,mls-rs-core/src/key_package.rs:14,FP,serialising the value is the type's purpose (serde feature)
+14,vaultwarden,6489552,CA012,high,src/auth/two_factor.rs:44,FP,webauthn key ids
+15,matrix-rust-sdk,1f5be00,CA012,high,crates/matrix-sdk-crypto/src/types/events/room_key.rs:81,FP,serialising the value is the type's purpose
+16,matrix-rust-sdk,1f5be00,CA012,high,bindings/matrix-sdk-crypto-ffi/src/lib.rs:782,FP,serialising the value is the type's purpose
+17,mls-rs,d4c5b19,CA012,high,mls-rs-core/src/identity/credential.rs:61,FP,public credential data
+18,vaultwarden,6489552,CA012,high,src/api/core/two_factor/duo_oidc.rs:85,FP,serialising the value is the type's purpose
+19,matrix-rust-sdk,1f5be00,CA012,high,crates/matrix-sdk-crypto/src/types/events/secret_send.rs:34,FP,serialising the value is the type's purpose
+20,vaultwarden,6489552,CA012,high,src/db/models/sso_auth.rs:28,FP,serialising the value is the type's purpose
+21,matrix-rust-sdk,1f5be00,CA012,high,crates/matrix-sdk-indexeddb/src/state_store/migrations.rs:72,FP,serialising the value is the type's purpose
+22,mls-rs,d4c5b19,CA012,high,mls-rs-core/src/crypto.rs:88,TP,"secret key type serialisable behind the serde feature, same class as StaticSecret in the calibration set"
+23,vaultwarden,6489552,CA012,high,src/api/core/two_factor/webauthn.rs:62,FP,u2f key handle and public key
+24,openmls,8ee6b40,CA012,high,openmls/src/schedule/tests_and_kats/kats/key_schedule.rs:57,NP,test vector / test-support code
+25,mls-rs,d4c5b19,CA013,high,mls-rs-core/src/identity/basic.rs:15,FP,public identity
+26,matrix-rust-sdk,1f5be00,CA013,medium,crates/matrix-sdk-common/src/deserialized_responses.rs:1323,FP,not a secret
+27,mls-rs,d4c5b19,CA013,high,mls-rs-core/src/crypto.rs:86,TP,
+28,mls-rs,d4c5b19,CA013,high,mls-rs-crypto-hpke/src/context.rs:144,TP,
+29,mls-rs,d4c5b19,CA013,high,mls-rs-core/src/key_package.rs:13,TP,
+30,mls-rs,d4c5b19,CA013,high,mls-rs/src/group/key_schedule.rs:29,TP,
+31,mls-rs,d4c5b19,CA013,high,mls-rs/src/psk/secret.rs:34,TP,
+32,openmls,8ee6b40,CA013,high,delivery-service/ds-lib/src/messages.rs:8,TP,
+33,mls-rs,d4c5b19,CA013,high,mls-rs/src/group/secret_tree.rs:315,TP,
+34,mls-rs,d4c5b19,CA013,high,mls-rs/src/group/key_schedule.rs:321,TP,
+35,mls-rs,d4c5b19,CA013,high,mls-rs-core/src/identity/credential.rs:59,FP,public credential data
+36,mls-rs,d4c5b19,CA013,high,mls-rs/src/group/secret_tree.rs:40,TP,
+37,vaultwarden,6489552,CA015,medium,src/api/core/organizations.rs:1236,TH,
+38,openmls,8ee6b40,CA015,medium,openmls/src/ciphersuite/tests_and_kats/kat_crypto_basics.rs:97,NP,test vector / test-support code
+39,vaultwarden,6489552,CA015,medium,src/api/push.rs:25,TH,
+40,openmls,8ee6b40,CA015,medium,openmls/src/test_utils/test_framework/mod.rs:65,NP,test vector / test-support code
+41,openmls,8ee6b40,CA015,medium,openmls/src/schedule/tests_and_kats/kats/key_schedule.rs:32,NP,test vector / test-support code
+42,openmls,8ee6b40,CA015,medium,delivery-service/ds-lib/src/messages.rs:10,TH,
+43,openmls,8ee6b40,CA015,medium,memory_storage/src/lib.rs:226,FP,"storage lookup key, not key material"
+44,vaultwarden,6489552,CA015,medium,src/db/models/user.rs:30,TH,
+45,mls-rs,d4c5b19,CA015,medium,mls-rs/src/group/interop_test_vectors/passive_client.rs:44,NP,test vector / test-support code
+46,mls-rs,d4c5b19,CA015,medium,mls-rs-core/src/crypto/test_suite.rs:227,NP,test vector / test-support code
+47,vaultwarden,6489552,CA015,medium,src/api/core/sends.rs:71,TH,
+48,vaultwarden,6489552,CA015,medium,src/api/notifications.rs:64,TH,
+49,signatures,a840817,CA016,high,xmss/src/xmss_core.rs:107,FP,"sk is a &mut parameter and the zeroed bytes are an index counter, not a dead local"
+50,signatures,a840817,CA016,high,xmss/src/xmss_core.rs:268,FP,"sk is a &mut parameter, the caller reads it"
+51,openmls,8ee6b40,CA018,medium,openmls/src/ciphersuite/tests_and_kats/kat_crypto_basics.rs:325,NP,test vector / test-support code
+52,openmls,8ee6b40,CA018,medium,openmls/src/ciphersuite/tests_and_kats/kat_crypto_basics.rs:335,NP,test vector / test-support code
+53,openmls,8ee6b40,CA018,medium,openmls/src/group/mls_group/tests_and_kats/kats/welcome.rs:241,NP,test vector / test-support code
+54,russh,e5d80a0,CA018,medium,russh/src/cipher/benchmark.rs:40,NP,bench code
+55,matrix-rust-sdk,1f5be00,CA021,high,crates/matrix-sdk-crypto/src/file_encryption/attachments.rs:65,FP,unkeyed SHA-256 of public ciphertext
+56,matrix-rust-sdk,1f5be00,CA021,high,crates/matrix-sdk-crypto/src/verification/sas/sas_state.rs:161,TP,
+57,openmls,8ee6b40,CA021,medium,openmls/src/framing/public_message_in.rs:209,FP,type-level-protection (Mac PartialEq is constant time)
+58,openmls,8ee6b40,CA021,medium,openmls/src/group/mls_group/staged_commit.rs:607,FP,type-level-protection (Mac PartialEq is constant time)
+59,matrix-rust-sdk,1f5be00,CA028,medium,crates/matrix-sdk-crypto/src/session_manager/sessions.rs:155,FP,"first argument is an event type, not a nonce"
+60,openmls,8ee6b40,CA028,medium,libcrux_crypto/src/ff1.rs:28,FP,"FF1 tweak, deterministic by design"
+61,openmls,8ee6b40,CA028,medium,openmls/src/treesync/node/parent_node.rs:78,FP,"crypto provider handle, not a nonce"
+62,openmls,8ee6b40,CA028,medium,openmls/src/treesync/treekem.rs:80,FP,"crypto provider handle, not a nonce"
+63,openmls,8ee6b40,CA028,medium,openmls_rust_crypto/src/ff1.rs:25,FP,"FF1 tweak, deterministic by design"

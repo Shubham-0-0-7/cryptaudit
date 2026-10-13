@@ -262,6 +262,105 @@ The honest numbers for the report are the **pre-fix** columns of both rounds. Th
 fixes were written against these repositories, so the next measurement needs a
 third set of unseen crates.
 
+## Blind evaluation, round 3 (new crates, sampled)
+
+The first measurement of the tool *after* the round 1 and round 2 fixes, on code
+it had never seen: ten new repositories, none used in any earlier round or in
+calibration: bitwarden-compatible server vaultwarden, russh, openmls, mls-rs,
+matrix-rust-sdk, aws-lc-rs, cocoon, RustCrypto/SSH, RustCrypto/signatures and
+ed25519-dalek. They produced 280 default-view findings (ed25519-dalek: none).
+A seeded random sample (seed 20261013) of **12 per rule**, all of them where a
+rule had fewer, gave 64 findings. They were labelled before any code changed:
+[eval/blind/labels_round3.csv](blind/labels_round3.csv).
+
+| Rule | Default-view findings in the 10 repos | Sampled | TP | TH | NP | FP | Strict precision |
+|---|---|---|---|---|---|---|---|
+| CA010 | 69 | 12 | 2 | 1 | 4 | 5 | 25% |
+| CA011 | 1 | 1 | 0 | 0 | 0 | 1 | 0% |
+| CA012 | 41 | 12 | 1 | 0 | 1 | 10 | 8% |
+| CA013 | 39 | 12 | 9 | 0 | 0 | 3 | 75% |
+| CA015 | 115 | 12 | 0 | 6 | 5 | 1 | 50% |
+| CA016 | 2 | 2 | 0 | 0 | 0 | 2 | 0% |
+| CA018 | 4 | 4 | 0 | 0 | 4 | 0 | 0% (all test code) |
+| CA021 | 4 | 4 | 1 | 0 | 0 | 3 | 25% |
+| CA028 | 5 | 5 | 0 | 0 | 0 | 5 | 0% |
+
+The same caveats as round 2 apply: 12 samples per rule is good to about
++/- 25 points, the rows are not pooled, one person labelled, and findings in one
+crate are correlated (10 of the 12 CA013 samples are from mls-rs, so that 75% is
+mostly "mls-rs derives `PartialEq` on its secret types").
+
+Two labelling judgements to be aware of. `Serialize` on a type whose job is to be
+stored or sent (a request, a session record, a key export) is labelled FP, as in
+round 2; `Serialize` on a plain secret-key type behind a `serde` feature is labelled
+TP, as for `StaticSecret` in the calibration set. And `NP` covers test vectors and
+test-support modules that live under `src/`, not only `tests/`.
+
+### Strict precision across the three rounds (before any fix)
+
+| Rule | Round 1 | Round 2 | Round 3 |
+|---|---|---|---|
+| CA010 | 35% (7/20) | 58% (7/12) | 25% (3/12) |
+| CA011 | - | 83% (10/12) | 0% (0/1) |
+| CA012 | 100% (2/2) | 25% (3/12) | 8% (1/12) |
+| CA013 | 50% (3/6) | 33% (4/12) | 75% (9/12) |
+| CA015 | 57% (23/40) | 67% (8/12) | 50% (6/12) |
+| CA016 | - | - | 0% (0/2) |
+| CA018 | 0% (0/3) | 0% (0/12) | 0% (0/4) |
+| CA020 | 0% (0/12) | - | - |
+| CA021 | 0% (0/9) | 82% (9/11) | 25% (1/4) |
+| CA027 | 0% (0/6) | 0% (0/12) | - |
+| CA028 | 0% (0/14) | 0% (0/9) | 0% (0/5) |
+| CA071 | - | 0% (0/1) | - |
+
+(Round 1 is every default-view finding in those twelve repositories; rounds 2 and 3
+are stratified samples. A dash means the rule did not fire in the default view.)
+
+What the three rounds say about each rule:
+
+- **Useful as they are**: CA013 and CA021 when the type or the call really is a
+  secret or a MAC (the kanidm password-hash comparisons, the mls-rs key schedule),
+  and CA011 outside FFI code.
+- **Mostly noise on application code**: CA010 and CA012. Both guess from names, and
+  application structs are full of secret-sounding names that are not secrets or are
+  carried on purpose.
+- **Hardening, not bugs**: CA015 (every true hit is a "should be zeroized" gap).
+- **No true positive in the default view in three rounds**: CA018, CA020, CA027, CA028. Their findings
+  were test code, protocol constants or wrongly read arguments. They stay in the
+  tool because they are cheap to suppress, but the write-up should not claim a
+  detection rate for them.
+
+### Fixes made after round 3
+
+Applied after labelling, so the round 3 table above is the pre-fix result.
+Re-scanning the labelled sample: every TP and TH is still reported (13 TP, 7 TH),
+all 14 test-code findings are gone, and 16 of the 30 false positives are gone or
+hidden; 14 false positives remain. Re-scanning rounds 1 and 2: no TP or TH lost in
+round 1; in round 2 four are no longer in the default view (the two generated-code
+hits already known from round 2, and the two CA012 findings below).
+
+| Cause | Fix |
+|---|---|
+| test vectors and test support under `src/` (`tests_and_kats/`, `test_utils/`, `interop_test_vectors.rs`, `benchmark.rs`) | any directory or file whose name contains the word test, tests, testing, kat, kats, fuzz, bench or benchmark is skipped (`latest/` is not) |
+| `sk_bytes: u32`, `n_secret: usize` read as secrets | an integer field named like a size or count (`n`, `num`, `bytes`, `max`, `min`, `limit`) is not a secret |
+| `Credential`, `BasicCredential` read as secret types | `credential` is now a weak word (often a public identity in MLS and WebAuthn) |
+| `Serialize` on a record that only has a secret-named field | CA012 is high only when the type itself is named like a secret (`SessionKey`, `StaticSecret`); otherwise low, so hidden by default. This costs the two CA012 true positives found in bitwarden in round 2 |
+| a crate whose tag type compares with `equal_ct` or `ct_equal` | the crate-wide "constant-time `PartialEq`" detection recognises those names too |
+| `self.sha.finalize()` compared with a hash of public data | a hash state kept in a struct field named `sha`, `md5` or `blake` is not treated as a MAC. A local `hasher` is deliberately still reported, because kanidm compares password hashes that way |
+| `ff1.encrypt(&[], ..)`, `device.encrypt("m.dummy", ..)`, `node.encrypt(crypto, ..)` | an empty array and a text literal are not nonces; `crypto`, `provider`, `backend`, `rng`, `ciphersuite`, `event_type` are not nonce names |
+| zeroing `sk[..n]` and then using `sk` again | CA016 is not reported if the variable is mentioned again after the wipe in the same function |
+
+Not fixed: the type-level `Serialize` and `PartialEq` hits on secret-named types
+that exist to carry the secret (CA012 on key exports and secret-sharing events),
+public key material that is named like a secret (`encryption_key` that is an HPKE
+public key, a FIDO key handle), and wiping a `&mut` parameter at the end of its
+life (CA016). They need a human or a suppression comment.
+
+Each fix has a fixture or a crate-context test. As in round 2, the post-fix
+numbers were produced on the repositories the fixes were written against, so they
+show the fixes work; they are not a precision estimate. A fourth set of unseen
+crates would be needed for that.
+
 ## Caveat
 
 Precision here is measured on repositories that were chosen because they are
