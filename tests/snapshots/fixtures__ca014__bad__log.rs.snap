@@ -1,0 +1,15 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+5:5 CA014 [high/medium] `password` is passed to `error!`, so the value ends up in the logs
+9:28 CA014 [high/medium] `password` is passed to `info!`, so the value ends up in the logs
+13:31 CA014 [high/high] `secret_key` is passed to `info!`, so the value ends up in the logs
+17:23 CA014 [high/medium] `signing_key` is passed to `warn!`, so the value ends up in the logs
+21:30 CA014 [high/medium] `api_key` is passed to `debug!`, so the value ends up in the logs
+22:22 CA014 [high/medium] `private_key` is passed to `trace!`, so the value ends up in the logs
+26:26 CA014 [high/high] `token` is passed to `bail!`, so the value ends up in an error message that is usually logged
+30:20 CA014 [high/medium] `secret_key` is passed to `println!`, so the value ends up in the terminal output
+31:10 CA014 [high/medium] `secret_key` is passed to `dbg!`, so the value ends up in standard error
+35:27 CA014 [high/medium] `seed` is passed to `panic!`, so the value ends up in the panic message
+38:1 CA014 [high/medium] `password` is recorded by `#[instrument]`, so the value ends up in the logs

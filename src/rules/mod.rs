@@ -6,6 +6,7 @@ mod ca010;
 mod compare;
 mod derives;
 mod keys;
+mod logging;
 mod nonce;
 mod results;
 mod rng;
@@ -30,6 +31,7 @@ pub fn all() -> Vec<Box<dyn Rule>> {
         Box::new(derives::copy_rule()),
         Box::new(derives::serialize_rule()),
         Box::new(derives::eq_rule()),
+        Box::new(logging::SecretInLog),
         Box::new(compare::MacEq),
         Box::new(compare::MacAssert),
         Box::new(results::UnwrapOnCrypto),
