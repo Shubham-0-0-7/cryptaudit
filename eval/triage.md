@@ -361,6 +361,54 @@ numbers were produced on the repositories the fixes were written against, so the
 show the fixes work; they are not a precision estimate. A fourth set of unseen
 crates would be needed for that.
 
+## CA014, first evaluation
+
+CA014 (secret passed to a logging, printing or error macro, or recorded by
+`#[tracing::instrument]`) was added after round 3. It was run over every repository
+from the calibration set and the three blind rounds, and **every** default-view
+finding was labelled (39 of them, so this is the whole population, not a sample):
+[eval/blind/labels_ca014.csv](blind/labels_ca014.csv). The rule had been written
+from general knowledge and fixtures, not tuned against these repositories, so this
+is its honest first measurement.
+
+| Where | Default-view findings | TP | NP | FP | Strict precision |
+|---|---|---|---|---|---|
+| calibration set (6 repos) | 0 | | | | quiet, as expected |
+| rounds 1-3 repos (32 repos) | 39 | 3 | 6 | 30 | 8% |
+
+The three true positives are a kanidm bearer session token in a `trace!`, a librespot
+login token in a `trace!`, and a kanidm `#[instrument]` that records a password and a
+RADIUS secret. The six NP are command-line tools that print a password on purpose
+and a developer-only `dangerous-crypto-debug` feature. The 30 false positives were
+mostly one cause: bitwarden's `bitwarden_logging::instrument` is a wrapper that
+skips every argument by default, and the rule treated it as `tracing::instrument`
+(16 of 30).
+
+Fixes made after labelling (so the table is the pre-fix result):
+
+| Cause | Fix |
+|---|---|
+| `bitwarden_logging::instrument` and other wrappers | only `tracing::instrument` is reported: a path that does not start with `tracing`, or a bare `instrument` imported from another crate, is skipped |
+| `{PASSWORD}` inside a message, a constant holding an option name | upper-case names are constants and are skipped, also in inline captures |
+| `hex::encode(key)` of a map or storage key | encoding only raises confidence for clearly secret names (`secret_key`, `password`); a bare `key` stays low. `expose_secret()` still raises it |
+| `secret_names` | `names` is an excluded word, like `name` |
+| `let derived_key = k.public_key()` | a local initialised from something named public is skipped |
+| `wrapping_key: SymmetricKeySlotId` | a type named like an id, slot, handle, index or ref is a handle, not a key |
+| `print!` family | lowered one step: output for the person at the terminal is often the point |
+
+After the fixes: all 3 true positives are still reported, 24 of the 30 false
+positives are gone or hidden, and 6 remain (cross-signing public keys called
+`master_key`, a snapshot key called `sk`, a shuffle seed, and a key type whose
+`Debug` redacts). The default view over the 32 repositories drops from 39 to 14
+findings. As in the other rounds, that second number was produced on the
+repositories the fixes were written against; a fresh set of crates is needed to
+measure it honestly. Re-scanning the earlier labelled corpora shows no true
+positive or hardening finding lost by the CA014 work.
+
+Not detected: a secret that reaches a log through a helper function, a struct whose
+`Debug` is derived (that is CA010), and `format!` or `write!` (they build strings for
+many other purposes).
+
 ## Caveat
 
 Precision here is measured on repositories that were chosen because they are

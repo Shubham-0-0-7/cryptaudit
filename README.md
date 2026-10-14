@@ -2,7 +2,7 @@
 
 Static analysis for cryptographic API misuse in Rust code.
 
-> **Status: early development.** Sixteen rules are implemented. More are planned; see the [roadmap](#roadmap).
+> **Status: early development.** Seventeen rules are implemented. More are planned; see the [roadmap](#roadmap).
 
 Modern ciphers like ChaCha20-Poly1305 and AES-GCM are sound. Real systems still break because the API is used wrongly: a reused nonce, a hardcoded key, a tag compared with `==`, a secret printed through `#[derive(Debug)]`. `cryptaudit` looks for these mistakes in your source code.
 
@@ -81,6 +81,7 @@ reason = "legacy code, tracked in #42"
 | CA011 | copy-on-secret | medium | `#[derive(Copy)]` on a secret type: every move duplicates the key, and `ZeroizeOnDrop` becomes impossible |
 | CA012 | serialize-on-secret | high | `#[derive(Serialize)]` on a secret type, unless the field has `#[serde(skip)]` or custom serialisation; high confidence only when the type itself is named like a secret, low for ordinary records with a secret-named field |
 | CA013 | partialeq-on-secret | medium | `#[derive(PartialEq)]` or a hand-written `==` on a secret type, instead of a constant-time comparison |
+| CA014 | secret-in-log | high | a secret passed to `info!`, `println!`, `panic!`, `bail!` and similar, or recorded by `#[tracing::instrument]`; reads `{}` arguments, inline `{name}` captures and tracing fields |
 | CA015 | secret-not-zeroized | medium | a struct holding a secret with no `Zeroize`/`ZeroizeOnDrop`, or a buffer filled by a KDF or RNG and dropped without being wiped |
 | CA016 | manual-zeroing | medium | a secret wiped with `fill(0)` or a loop, which the optimiser may delete; use `zeroize` |
 | CA018 | unwrap-on-crypto-result | medium | `.unwrap()` / `.expect()` on `decrypt`, `verify_slice` and similar: tampered input panics the process |
@@ -110,6 +111,7 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 
 - [x] CLI, `syn`-based scanner, human and JSON output
 - [x] CA010: secrets printed by `Debug`/`Display`
+- [x] CA014: secrets passed to logging and printing macros
 - [x] CA011, CA012, CA013: `Copy`, `Serialize` and `PartialEq` on secret types
 - [x] CA018, CA019: `unwrap` on, and discarding, decrypt/verify results
 - [x] CA020, CA021: MAC and tag comparisons

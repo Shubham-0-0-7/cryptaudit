@@ -17,3 +17,6 @@ from ten more crates, labelled before the round-2 fixes. Columns as above, plus
 `labels_round3.csv` is round 3: a seeded sample (seed 20261013, 12 default-view
 findings per rule) from ten more crates, labelled before the round-3 fixes. Same
 columns as `labels_round2.csv`.
+
+`labels_ca014.csv` is the first evaluation of CA014: every default-view finding in
+the calibration repos and the repos of rounds 1-3, labelled before the CA014 fixes.

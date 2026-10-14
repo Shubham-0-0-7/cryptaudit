@@ -1,0 +1,40 @@
+id,repo,commit,rule,confidence,location,label,reason
+0,kanidm,3331b8e,CA014,medium,server/core/src/https/v1.rs:1463,TP,bearer session token in a trace log
+1,kanidm,3331b8e,CA014,medium,server/daemon/src/main.rs:184,NP,admin recover-account prints the new password on purpose
+2,kanidm,3331b8e,CA014,medium,server/lib/src/idm/credupdatesession.rs:1885,TP,trace-level #[instrument] records the password and radius secret
+3,kanidm,3331b8e,CA014,medium,server/lib/src/repl/ruv.rs:470,FP,"`sk` is a snapshot key in a replication log, not a secret key"
+4,librespot,4a00590,CA014,medium,connect/src/state/transfer.rs:74,FP,shuffle seed of a playlist
+5,librespot,4a00590,CA014,medium,core/src/login5.rs:202,TP,auth token in a trace log
+6,librespot,4a00590,CA014,medium,src/main.rs:1228,FP,"command-line option name, not a value"
+7,librespot,4a00590,CA014,medium,src/main.rs:1228,FP,"command-line option name, not a value"
+8,matrix-rust-sdk,1f5be00,CA014,medium,crates/matrix-sdk/src/encryption/backups/mod.rs:902,FP,public key derived from the decryption key
+9,matrix-rust-sdk,1f5be00,CA014,medium,crates/matrix-sdk-crypto/src/gossiping/machine.rs:861,FP,"names of secrets, not values"
+10,matrix-rust-sdk,1f5be00,CA014,medium,crates/matrix-sdk-crypto/src/machine/mod.rs:486,FP,cross-signing master key is the public identity key
+11,matrix-rust-sdk,1f5be00,CA014,medium,crates/matrix-sdk-crypto/src/store/crypto_store_wrapper.rs:152,FP,cross-signing public identity key
+12,matrix-rust-sdk,1f5be00,CA014,medium,crates/matrix-sdk-crypto/src/store/crypto_store_wrapper.rs:153,FP,cross-signing public identity key
+13,matrix-rust-sdk,1f5be00,CA014,medium,crates/matrix-sdk-crypto/src/store/crypto_store_wrapper.rs:154,FP,cross-signing public identity key
+14,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:100,FP,"storage lookup key, logged only under the test-utils feature"
+15,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:117,FP,"storage lookup key, logged only under the test-utils feature"
+16,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:144,FP,"storage lookup key, logged only under the test-utils feature"
+17,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:174,FP,"storage lookup key, logged only under the test-utils feature"
+18,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:202,FP,"storage lookup key, logged only under the test-utils feature"
+19,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:231,FP,"storage lookup key, logged only under the test-utils feature"
+20,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:824,FP,"storage lookup key, logged only under the test-utils feature"
+21,openmls,8ee6b40,CA014,medium,memory_storage/src/lib.rs:849,FP,"storage lookup key, logged only under the test-utils feature"
+22,rage,b5b68c4,CA014,high,rage/src/bin/rage/main.rs:151,NP,CLI prints the generated passphrase on purpose
+23,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/client/encryption_settings.rs:89,FP,`bitwarden_logging::instrument` skips all arguments by default
+24,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/client/internal.rs:271,FP,`bitwarden_logging::instrument` skips all arguments by default
+25,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/client/internal.rs:401,FP,`bitwarden_logging::instrument` skips all arguments by default
+26,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/client/internal.rs:401,FP,`bitwarden_logging::instrument` skips all arguments by default
+27,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/key_management/account_cryptographic_state.rs:518,NP,"dev-only `dangerous-crypto-debug` feature, by design"
+28,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/key_management/account_cryptographic_state.rs:581,NP,"dev-only `dangerous-crypto-debug` feature, by design"
+29,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/key_management/account_cryptographic_state.rs:582,NP,"dev-only `dangerous-crypto-debug` feature, by design"
+30,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/key_management/master_password.rs:111,FP,`bitwarden_logging::instrument` skips all arguments by default
+31,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-core/src/key_management/master_password.rs:210,FP,`bitwarden_logging::instrument` skips all arguments by default
+32,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-crypto/src/store/context.rs:223,FP,`bitwarden_logging::instrument` skips all arguments by default
+33,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-crypto/src/store/context.rs:278,FP,Debug of the key type redacts the key unless a dangerous feature is on
+34,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-crypto/src/store/context.rs:394,FP,`bitwarden_logging::instrument` skips all arguments by default
+35,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-user-crypto-management/src/key_rotation/rotate_user_keys.rs:114,FP,`bitwarden_logging::instrument` skips all arguments by default
+36,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-vault/src/cipher/blob/encryption.rs:156,FP,`bitwarden_logging::instrument` skips all arguments by default
+37,sdk-internal,7d5b101,CA014,medium,crates/bitwarden-vault/src/cipher/blob/sealed.rs:59,FP,`bitwarden_logging::instrument` skips all arguments by default
+38,sdk-internal,7d5b101,CA014,medium,support/lints/tracing_instrument/ui/main.rs:63,NP,lint test case for the wrapper
