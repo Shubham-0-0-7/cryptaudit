@@ -20,3 +20,7 @@ columns as `labels_round2.csv`.
 
 `labels_ca014.csv` is the first evaluation of CA014: every default-view finding in
 the calibration repos and the repos of rounds 1-3, labelled before the CA014 fixes.
+
+`labels_round4.csv` is round 4: a seeded sample (seed 20261014, up to 12 default-view
+findings per rule, all 16 for CA014) from twelve more crates, labelled before the
+round-4 fixes. Same columns as `labels_round2.csv`.

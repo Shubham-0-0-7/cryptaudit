@@ -79,7 +79,7 @@ reason = "legacy code, tracked in #42"
 |---|---|---|---|
 | CA010 | secret-in-debug | high | `#[derive(Debug)]` on a struct with secret fields, and hand-written `Debug`/`Display` impls that print a secret, including through a local variable |
 | CA011 | copy-on-secret | medium | `#[derive(Copy)]` on a secret type: every move duplicates the key, and `ZeroizeOnDrop` becomes impossible |
-| CA012 | serialize-on-secret | high | `#[derive(Serialize)]` on a secret type, unless the field has `#[serde(skip)]` or custom serialisation; high confidence only when the type itself is named like a secret, low for ordinary records with a secret-named field |
+| CA012 | serialize-on-secret | high | `#[derive(Serialize)]` on a secret type, unless the field has `#[serde(skip)]` or custom serialisation; high confidence only when the type itself is named like a clear secret (`SessionKey`), low for ordinary records such as `Credentials` or a request type |
 | CA013 | partialeq-on-secret | medium | `#[derive(PartialEq)]` or a hand-written `==` on a secret type, instead of a constant-time comparison |
 | CA014 | secret-in-log | high | a secret passed to `info!`, `println!`, `panic!`, `bail!` and similar, or recorded by `#[tracing::instrument]`; reads `{}` arguments, inline `{name}` captures and tracing fields |
 | CA015 | secret-not-zeroized | medium | a struct holding a secret with no `Zeroize`/`ZeroizeOnDrop`, or a buffer filled by a KDF or RNG and dropped without being wiped |
@@ -122,8 +122,8 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 - [x] Inline suppression and `cryptaudit.toml`
 - [ ] SARIF output
 - [x] First evaluation on real crates ([eval/triage.md](eval/triage.md))
-- [x] Blind evaluation on unseen crates, three rounds, labelled ([eval/blind](eval/blind/README.md))
-- [ ] A fourth blind round to measure precision after the round 3 fixes, and recall on crates with known bugs
+- [x] Blind evaluation on unseen crates, four rounds, labelled ([eval/blind](eval/blind/README.md))
+- [ ] A fifth blind round to measure precision after the round 4 fixes, and recall on crates with known bugs
 
 ## Authors
 

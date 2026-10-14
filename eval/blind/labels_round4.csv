@@ -1,0 +1,92 @@
+id,repo,commit,rule,confidence,location,label,reason
+0,webauthn-rs,be696b7,CA010,high,webauthn-authenticator-rs/src/cable/handshake.rs:23,TP,caBLE handshake secret printed by derived Debug
+1,ockam,0435d8d,CA010,high,implementations/rust/ockam/ockam_vault/src/types/secrets.rs:5,FP,"handle that addresses a secret, not the secret"
+2,mail-server,18f4e95,CA010,medium,crates/common/src/ipc.rs:91,FP,u32 id of a cached access token
+3,tendermint-rs,a2aa5bf,CA010,high,rpc/src/endpoint/abci_query.rs:68,FP,"ABCI store key, not a crypto key"
+4,webauthn-rs,be696b7,CA010,high,webauthn-authenticator-rs/src/ctap2/ctap20.rs:27,TP,pinUvAuthToken printed by derived Debug
+5,librustzcash,16f0723,CA010,high,zcash_primitives/src/transaction/components/sprout.rs:82,FP,random_seed is a public field of a Sprout transaction
+6,webauthn-rs,be696b7,CA010,high,webauthn-rs-core/src/internals.rs:406,TH,large_blob_key in a parsed attestation; hardening only
+7,ockam,0435d8d,CA010,high,implementations/rust/ockam/ockam_command/src/zone/dev.rs:31,TP,API key in a CLI struct that derives Debug
+8,rustdesk,e910029,CA010,high,src/auth_2fa.rs:114,TP,Telegram bot token printed by derived Debug
+9,ockam,0435d8d,CA010,high,implementations/rust/ockam/ockam_node/src/storage/database/database_configuration.rs:394,TP,database password printed by derived Debug
+10,mail-server,18f4e95,CA010,high,crates/store/src/write/mod.rs:259,FP,"storage key, not a crypto key"
+11,sigstore-rs,038e36a,CA010,medium,src/crypto/signing_key/ecdsa/ec.rs:136,FP,public key (SPKI)
+12,firezone,d10498d,CA011,high,rust/libs/connlib/tunnel-proto/src/messages/key.rs:17,TP,WireGuard key type is Copy
+13,librustzcash,16f0723,CA011,high,zcash_keys/src/keys.rs:885,TP,outgoing viewing key is Copy
+14,mail-server,18f4e95,CA011,medium,crates/common/src/ipc.rs:91,FP,u32 id
+15,mullvadvpn-app,fb924b6,CA011,medium,mullvad-encrypted-dns-proxy/src/config/xor.rs:42,FP,"XOR obfuscation key, not a secret"
+16,mullvadvpn-app,fb924b6,CA011,high,talpid-wireguard/src/wireguard_nt/mod.rs:339,TH,FFI repr(C) struct holding a preshared key; Copy is needed for the layout
+17,mullvadvpn-app,fb924b6,CA011,high,talpid-wireguard/src/wireguard_nt/mod.rs:413,TH,FFI repr(C) struct holding a private key
+18,mullvadvpn-app,fb924b6,CA011,high,tunnel-obfuscation/src/gotatun_transport/lwo.rs:21,FP,obfuscation keys derived from public keys
+19,ockam,0435d8d,CA011,medium,implementations/rust/ockam/ockam_vault/src/software/legacy/secret_attributes.rs:14,FP,u32 length
+20,quinn,9d729c1,CA011,high,quinn-proto/src/token.rs:365,TH,stateless reset token is semi-secret and Copy
+21,tendermint-rs,a2aa5bf,CA011,high,tendermint/src/crypto/ed25519/verification_key.rs:3,FP,public verification key
+22,firezone,d10498d,CA012,high,rust/libs/connlib/tunnel-proto/src/messages.rs:94,FP,ICE credentials struct that exists to be sent
+23,mail-server,18f4e95,CA012,medium,crates/email/src/push/mod.rs:28,FP,"push subscription keys, struct exists to be stored"
+24,mail-server,18f4e95,CA012,high,crates/http/src/auth/oauth/mod.rs:122,FP,OAuth request struct that exists to be sent
+25,mail-server,18f4e95,CA012,medium,crates/spam-filter/src/modules/classifier.rs:1039,FP,"spam classifier token, not a secret"
+26,mullvadvpn-app,fb924b6,CA012,medium,mullvad-encrypted-dns-proxy/src/config/xor.rs:42,FP,XOR obfuscation key
+27,ockam,0435d8d,CA012,high,implementations/rust/ockam/ockam_api/src/orchestrator/ai_platform/responses.rs:161,FP,credential struct that exists to be sent
+28,ockam,0435d8d,CA012,medium,implementations/rust/ockam/ockam_vault/src/software/legacy/secret_attributes.rs:14,FP,u32 length
+29,rustdesk,e910029,CA012,high,src/client.rs:2766,FP,stored password-source record
+30,rustdesk,e910029,CA012,high,src/client.rs:2812,FP,stored connection token record
+31,webauthn-rs,be696b7,CA012,medium,webauthn-authenticator-rs/src/ctap2/commands/make_credential.rs:14,FP,CTAP request message; the field is an HMAC sent on the wire
+32,webauthn-rs,be696b7,CA012,medium,webauthn-rs-core/src/interface.rs:184,FP,RSA public exponent
+33,mullvadvpn-app,fb924b6,CA013,high,mullvad-types/src/settings/mod.rs:112,FP,"rollout seed, not a secret"
+34,mullvadvpn-app,fb924b6,CA013,medium,mullvad-encrypted-dns-proxy/src/config/xor.rs:42,FP,XOR obfuscation key
+35,ockam,0435d8d,CA013,high,implementations/rust/ockam/ockam_vault/src/software/vault_for_secure_channels/types.rs:10,TP,X25519 secret key compared with derived PartialEq
+36,webauthn-rs,be696b7,CA013,medium,webauthn-rs-core/src/interface.rs:184,FP,RSA public exponent
+37,mail-server,18f4e95,CA013,high,crates/directory/src/lib.rs:72,TH,account password compared by derived PartialEq
+38,ockam,0435d8d,CA013,high,implementations/rust/ockam/ockam_vault/src/software/vault_for_secure_channels/types.rs:25,TP,HKDF output compared by derived PartialEq
+39,ockam,0435d8d,CA013,medium,implementations/rust/ockam/ockam_identity/src/models/credential.rs:13,FP,"signed credential blob, not secret"
+40,mullvadvpn-app,fb924b6,CA013,high,mullvad-api/src/domain_fronting.rs:67,FP,fronting session key is a constant identifier
+41,ockam,0435d8d,CA013,medium,implementations/rust/ockam/ockam_identity/src/models/purpose_key_attestation.rs:16,FP,signed attestation blob
+42,tendermint-rs,a2aa5bf,CA013,high,tendermint/src/abci/event.rs:294,FP,ABCI event key
+43,mail-server,18f4e95,CA013,high,crates/store/src/write/mod.rs:259,FP,storage key
+44,mail-server,18f4e95,CA013,high,crates/store/src/write/mod.rs:143,FP,storage key
+45,firezone,d10498d,CA014,medium,rust/relay/server/src/main.rs:431,FP,RNG seed printed on purpose for reproducibility
+46,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/inlet/request.rs:43,FP,Kafka API key number
+47,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/inlet/request.rs:64,FP,Kafka API enum
+48,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/inlet/response.rs:57,FP,Kafka API enum
+49,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/inlet/response.rs:134,FP,Kafka API number
+50,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/inlet/response.rs:160,FP,Kafka API enum
+51,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/outlet/request.rs:27,FP,Kafka API key number
+52,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/outlet/request.rs:48,FP,Kafka API enum
+53,ockam,0435d8d,CA014,medium,implementations/rust/ockam/ockam_api/src/kafka/protocol_aware/outlet/response.rs:52,FP,Kafka API enum
+54,rustdesk,e910029,CA014,medium,src/client.rs:1279,FP,WebRTC session id
+55,rustdesk,e910029,CA014,medium,src/rendezvous_mediator.rs:577,FP,WebRTC session id
+56,rustdesk,e910029,CA014,medium,src/updater.rs:611,FP,temp directory path
+57,rustdesk,e910029,CA014,medium,src/updater.rs:621,FP,temp directory path
+58,rustdesk,e910029,CA014,medium,src/updater.rs:631,FP,temp directory path
+59,webauthn-rs,be696b7,CA014,medium,sshkey-attest/src/lib.rs:87,FP,public attestation data
+60,webauthn-rs,be696b7,CA014,medium,webauthn-authenticator-rs/src/ctap2/ctap20.rs:317,TP,pinUvAuthToken logged at trace level
+61,librustzcash,16f0723,CA015,medium,zcash_primitives/src/transaction/components/sprout.rs:51,FP,public transaction fields
+62,tendermint-rs,a2aa5bf,CA015,medium,tendermint/src/crypto/ed25519/signing_key.rs:7,TP,ed25519 signing key never wiped
+63,ockam,0435d8d,CA015,medium,implementations/rust/ockam/ockam_node/src/storage/database/migrations/node_migrations/rust/postgres/migration_20250407100000_sqlite_initialization.rs:782,TH,migration code reading stored secrets
+64,webauthn-rs,be696b7,CA015,medium,webauthn-authenticator-rs/src/ctap2/commands/make_credential.rs:16,FP,HMAC value that is sent on the wire
+65,rustdesk,e910029,CA015,medium,src/ui_session_interface.rs:61,TH,password held in a long-lived session struct
+66,ockam,0435d8d,CA015,medium,implementations/rust/ockam/ockam_command/src/identity/export.rs:78,TH,exported identity file holds the signing secret
+67,sigstore-rs,038e36a,CA015,medium,src/oauth/openidflow.rs:115,TH,OIDC client secret in a String
+68,mullvadvpn-app,fb924b6,CA015,medium,mullvad-api/src/domain_fronting.rs:68,FP,fronting session key is a constant identifier
+69,mail-server,18f4e95,CA015,medium,crates/common/src/auth/credential.rs:15,TH,API key secret never wiped
+70,ockam,0435d8d,CA015,medium,implementations/rust/ockam/ockam_transport_tcp/src/portal/tls_certificate.rs:23,TH,TLS private key PEM never wiped
+71,mullvadvpn-app,fb924b6,CA015,medium,mullvad-cli/src/cmds/proxies.rs:90,NP,clap argument struct in a CLI
+72,mail-server,18f4e95,CA015,medium,crates/common/src/network/acme/mod.rs:65,TH,ACME private key PEM never wiped
+73,hickory-dns,2cff031,CA018,medium,util/src/bin/dns.rs:400,FP,"file open in a DNS utility, not crypto"
+74,quinn,9d729c1,CA018,high,quinn-proto/src/crypto/rustls.rs:248,FP,header protection has no authentication step
+75,webauthn-rs,be696b7,CA018,medium,fido-hid-rs/src/macos/mod.rs:110,FP,"HID device open, not crypto"
+76,sigstore-rs,038e36a,CA021,high,src/bundle/verify/models.rs:470,FP,digests of public log data
+77,mail-server,18f4e95,CA021,high,crates/directory/src/core/secret.rs:165,TP,password hash compared with ==
+78,firezone,d10498d,CA021,high,rust/libs/bin-shared/src/tun_device_manager/windows.rs:391,FP,digest of a public DLL
+79,hickory-dns,2cff031,CA021,medium,crates/net/src/dnssec/mod.rs:1551,FP,"key tag, public"
+80,rustdesk,e910029,CA021,high,src/lan.rs:273,FP,network MAC address
+81,mullvadvpn-app,fb924b6,CA021,medium,mullvad-api/src/relay_list_transparency/mod.rs:186,FP,public digest
+82,mail-server,18f4e95,CA021,high,crates/smtp/src/outbound/dane/verify.rs:234,FP,"DANE record data, public"
+83,sigstore-rs,038e36a,CA021,high,src/cosign/signature_layers.rs:868,FP,digests of public log data
+84,sigstore-rs,038e36a,CA021,medium,src/cosign/payload/simple_signing.rs:90,FP,public manifest digest
+85,webauthn-rs,be696b7,CA021,medium,webauthn-authenticator-rs/src/cable/discovery.rs:308,TP,truncated HMAC of a BLE advert compared with !=
+86,sigstore-rs,038e36a,CA021,high,src/bundle/verify/models.rs:492,FP,digests of public log data
+87,hickory-dns,2cff031,CA021,high,crates/proto/src/dnssec/rdata/ds.rs:273,FP,DS digest of a public key
+88,firezone,d10498d,CA071,medium,rust/libs/connlib/snownet/src/node/allocations.rs:54,NP,#[cfg(test)] helper; the scanner should have skipped it
+89,mail-server,18f4e95,CA071,medium,crates/nlp/src/classifier/train.rs:33,FP,shuffle seed for ML training
+90,mail-server,18f4e95,CA071,medium,crates/nlp/src/classifier/train.rs:84,FP,shuffle seed for ML training

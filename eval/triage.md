@@ -409,10 +409,96 @@ Not detected: a secret that reaches a log through a helper function, a struct wh
 `Debug` is derived (that is CA010), and `format!` or `write!` (they build strings for
 many other purposes).
 
+## Blind evaluation, round 4 (new crates, sampled, after the round 3 fixes)
+
+Twelve crates that none of the earlier rounds used: ockam, mullvadvpn-app, firezone,
+rustdesk, mail-server, webauthn-rs, librustzcash, quinn, hickory-dns, sigstore-rs,
+tendermint-rs and keyring-rs (keyring-rs produced no findings). Scans ran with
+`--no-suppress --min-confidence low`; the default view of the 12 crates held 354
+findings. A seeded sample (seed 20261014) of up to 12 default-view findings per rule,
+all 16 for CA014, was labelled before any change: 91 findings in
+[eval/blind/labels_round4.csv](blind/labels_round4.csv). Labels are TP, TH, NP and FP
+as before, by one labeller.
+
+This is the first measurement of the rules after the round 3 fixes on crates they
+were not tuned on.
+
+| Rule | n | TP | TH | NP | FP | Strict precision |
+|---|---|---|---|---|---|---|
+| CA010 | 12 | 5 | 1 | 0 | 6 | 50% |
+| CA011 | 10 | 2 | 3 | 0 | 5 | 50% |
+| CA012 | 11 | 0 | 0 | 0 | 11 | 0% |
+| CA013 | 12 | 2 | 1 | 0 | 9 | 25% |
+| CA014 | 16 | 1 | 0 | 0 | 15 | 6% |
+| CA015 | 12 | 1 | 7 | 1 | 3 | 67% |
+| CA018 | 3 | 0 | 0 | 0 | 3 | 0% |
+| CA021 | 12 | 2 | 0 | 0 | 10 | 17% |
+| CA071 | 3 | 0 | 0 | 1 | 2 | 0% |
+| **All** | **91** | **13** | **12** | **2** | **64** | **27%** |
+
+Strict precision is (TP + TH) / n. The true positives are real, for example a
+`pinUvAuthToken` logged at trace level, an X25519 secret key compared with a derived
+`==`, a password hash compared with `==`, and `Debug` derived on a Telegram bot token.
+Low precision is not explained by clean code: the false positives are the rules
+misreading harmless names.
+
+Where the false positives come from:
+
+| Cause | Examples | Rules |
+|---|---|---|
+| a secret-sounding name on something that is not a secret | Kafka `api_key` (an enum or number), a `session_key` that is a WebRTC id, a storage or ABCI `key`, an RSA public exponent `e`, a `private_tmp` path, an XOR obfuscation key | CA010, CA011, CA013, CA014 |
+| a number named like a secret | `AccessToken(u32)`, a rollout seed, a shuffle seed | CA010, CA013, CA014, CA071 |
+| a record that exists to be sent or stored | OAuth request, ICE credentials, a push subscription | CA012 |
+| a hash of public data compared with `==` | a certificate pin, a DLL hash, a DNSSEC DS record, a TLSA record, a log entry hash | CA021 |
+| not an authentication step | `File::open(..).expect(..)`, a HID device open, QUIC header protection | CA018 |
+| test-only code | a `#[cfg(test)]` method inside an `impl` was not skipped | CA071 |
+
+### Fixes made after round 4
+
+| Cause | Fix |
+|---|---|
+| integers logged as secrets (`api_key_num: i16`, a seed) | CA014 skips integers unless the code calls `expose_secret()`; integer reads (`try_get_i16()`, `as u32`, `len()`) are inferred for untyped locals |
+| a typed value built by a constructor (`ApiKey::try_from(n)?`) | CA014 skips locals built by `new`, `from`, `try_from`, `parse` or `from_*` on a named type, unless it is explicitly encoded or exposed: what such a value prints is decided by the type's own `Debug`, which CA010 checks |
+| paths and handles | `tmp`, `temp`, `dir`, `directory`, `folder`, `handle`, `handles`, `slot`, `xor`, `obfuscation` are excluded words |
+| RSA public exponent | a field called `e` does not inherit secrecy from its owner |
+| `AccessToken(u32)` | an unnamed integer field inheriting a strong owner name is low, not medium |
+| `VerificationKey` | `verification` is a public-material word, like `verifying` |
+| CA012 on request and record types | high only when the type name is a clear secret (`SessionKey`, `StaticSecret`); `Credentials`, `TokenRequest` and similar are low |
+| CA021 on hashes of public data | `Sha256::digest(..)`, `Sha1::digest(..)` and similar are unkeyed, so they count as weak evidence; a MAC, or a `hasher.finalize()` kept in a local (the password case) stays high; `key_tag` is not a tag. This reverses calibration fix 4 above for `Sha256::digest(..)` specifically: a hash of known data is not a MAC, and round 4 found it was the main CA021 false positive |
+| CA018 on `open` | `open` with fewer than two arguments is a file or device open, not an AEAD `open` |
+| test-only methods | `#[cfg(test)]` and `#[test]` items inside an `impl` block are removed before scanning |
+
+Re-scanning the labelled samples after these changes:
+
+| | Before | After |
+|---|---|---|
+| default-view findings, 12 round 4 crates | 354 | 299 |
+| sampled TP and TH kept | 25 | 25 |
+| sampled false positives still shown | 64 | 29 |
+| strict precision of the sample | 27% | 45% |
+
+No true positive or hardening finding in rounds 1-4 or the CA014 set was lost by the
+round 4 fixes, except one CA012 true positive from round 2 that is now low: bitwarden's
+`IdentityTokenPayloadResponse`, a response struct holding `access_token` and
+`refresh_token`. Its type name is only weakly secret-sounding. This trade is
+deliberate: with the type-name rule, CA012 is quiet on records that exist to be sent,
+and that round 2 label is arguably inconsistent with how round 4 labels such records.
+
+As in rounds 2 and 3, the after numbers were produced on the sample the fixes were
+written against, so they show that the fixes work; they are not a precision estimate.
+Findings that remain false positives are of these kinds: a `key: Vec<u8>` field that is
+a storage or protocol key (CA010, CA013), signed blobs and public digests whose field
+is called `digest` (CA021), a MAC address called `mac`, and Kafka `api_key` values held
+in a struct field (the file does not show the type). A fifth set of crates is needed to
+measure the result honestly.
+
+A correction to an earlier note: the round 4 default view held 354 findings, not
+about 450.
+
 ## Caveat
 
 Precision here is measured on repositories that were chosen because they are
 expected to be quiet, and the rules were tuned against them: 9 of the false
 positives above were found and fixed this way. The numbers show the rules do not
 fire on well-written code; they are not an estimate of precision on arbitrary
-crates. The blind evaluation above did that: strict precision in the default view is 31%.
+crates. The blind evaluation above did that: strict precision in the default view is 31% in round 1 and 27% in round 4, before the fixes of each round.
