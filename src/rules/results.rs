@@ -88,12 +88,15 @@ fn crypto_result(method: &str) -> Option<Confidence> {
 /// `File::open(..)`, `OpenOptions::new().read(true).open(..)`: opening a file, not a sealed box.
 fn is_file_open(call: &ExprMethodCall) -> bool {
     use quote::ToTokens;
-    call.method == "open" && {
-        let receiver = call.receiver.to_token_stream().to_string();
-        ["File", "fs", "OpenOptions", "options"]
-            .iter()
-            .any(|w| receiver.contains(w))
-    }
+    // An AEAD `open` takes a nonce and a ciphertext; `open(path)` and
+    // `open(options)` open a file or a device.
+    call.method == "open"
+        && (call.args.len() < 2 || {
+            let receiver = call.receiver.to_token_stream().to_string();
+            ["File", "fs", "OpenOptions", "options"]
+                .iter()
+                .any(|w| receiver.contains(w))
+        })
 }
 
 const BARE: &str = "bare statement";

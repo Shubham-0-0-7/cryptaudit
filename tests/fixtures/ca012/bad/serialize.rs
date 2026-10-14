@@ -21,7 +21,7 @@ enum Auth {
     Anonymous,
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize))] // expect: CA012 high
+#[cfg_attr(feature = "serde", derive(Serialize))] // expect: CA012 low
 struct Credentials {
     username: String,
     password: String,

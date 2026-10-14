@@ -31,8 +31,8 @@ fn printed(secret_key: &[u8]) {
     dbg!(secret_key); // expect: CA014 medium
 }
 
-fn panics(seed: u64) {
-    panic!("bad seed {}", seed); // expect: CA014 medium
+fn panics(seed: &[u8]) {
+    panic!("bad seed {:?}", seed); // expect: CA014 medium
 }
 
 #[tracing::instrument] // expect: CA014 medium

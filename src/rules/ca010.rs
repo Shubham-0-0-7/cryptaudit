@@ -310,6 +310,10 @@ pub(super) fn field_confidence(
             if class == Int && is_size_name(&n) {
                 return None;
             }
+            // `e` is the RSA public exponent: nothing to inherit from the owner.
+            if n == "e" {
+                return None;
+            }
             classify_name(&n)
         }
         None => None,
@@ -327,7 +331,9 @@ pub(super) fn field_confidence(
             // unnamed field (`Seed(u64)`) inherits it.
             (Some(Strong), Int) if name.is_some() => None,
             (Some(Strong), Str) if name.is_some() => Some(Low),
-            (Some(Strong), Str | Int) => Some(Medium),
+            // `AccessToken(u32)` is an id more often than a secret number.
+            (Some(Strong), Int) => Some(Low),
+            (Some(Strong), Str) => Some(Medium),
             (Some(Weak), Bytes) if name.is_none() => Some(High),
             (Some(Weak), Bytes) => Some(Medium),
             (Some(Weak), Int) if name.is_some() => None,

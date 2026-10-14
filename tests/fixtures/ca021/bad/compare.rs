@@ -7,9 +7,11 @@ fn check_stored(key: &[u8], msg: &[u8], expected: &[u8]) -> bool {
     mac.finalize().into_bytes().as_slice() == expected // expect: CA021 high
 }
 
+// `Sha256::digest` is an unkeyed hash of data the attacker may know, not a MAC:
+// low confidence.
 fn check_negated(computed: &[u8; 32], expected: &[u8; 32]) -> bool {
     let digest = Sha256::digest(b"data");
-    digest.as_slice() != expected // expect: CA021 high
+    digest.as_slice() != expected // expect: CA021 low
 }
 
 // Shape of the [crate withheld] finding: both sides named like MACs.

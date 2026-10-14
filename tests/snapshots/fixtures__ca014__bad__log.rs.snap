@@ -11,5 +11,5 @@ expression: snap
 26:26 CA014 [high/high] `token` is passed to `bail!`, so the value ends up in an error message that is usually logged
 30:20 CA014 [high/medium] `secret_key` is passed to `println!`, so the value ends up in the terminal output
 31:10 CA014 [high/medium] `secret_key` is passed to `dbg!`, so the value ends up in standard error
-35:27 CA014 [high/medium] `seed` is passed to `panic!`, so the value ends up in the panic message
+35:29 CA014 [high/medium] `seed` is passed to `panic!`, so the value ends up in the panic message
 38:1 CA014 [high/medium] `password` is recorded by `#[instrument]`, so the value ends up in the logs

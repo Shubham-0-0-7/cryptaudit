@@ -10,7 +10,7 @@ use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use syn::spanned::Spanned;
 use syn::visit::{self, Visit};
-use syn::{Expr, ImplItemFn, ItemFn, ItemStruct, Lit, Macro, Pat};
+use syn::{Expr, ImplItemFn, ItemFn, ItemStruct, Lit, Macro, Pat, Type};
 
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
@@ -50,7 +50,11 @@ parameter unless the attribute has `skip(name)` or `skip_all`.
 
 Not reported: `secret.len()` and other calls that do not show the value, names
 that say public or ciphertext (`public_key`, `encrypted_key`, `key_id`), values
-whose type already redacts `Debug` (`secrecy::SecretString`), and constants.
+whose type already redacts `Debug` (`secrecy::SecretString`), constants, and
+integers (an id, a count, an enum number; a seed is only secret when it feeds a
+key, which this rule cannot see). A value built by `Type::new`, `from`,
+`try_from` or `parse` is skipped too: what it prints is decided by that type's
+own `Debug`, which CA010 checks.
 
 Confidence:
   medium  the name is clearly a secret (`password`, `secret_key`, `api_key`)
@@ -267,6 +271,88 @@ fn target_of(expr: &Expr) -> Option<Target> {
     }
 }
 
+/// The type class of `let x = <expr>`, when the initialiser says: an integer read
+/// (`buf.try_get_i16()?`, `n as u32`, `v.len()`), or a constructor call on a named
+/// type (`ApiKey::try_from(n)?`), whose own `Debug` decides what it prints.
+fn infer_class(expr: &Expr) -> Option<TypeClass> {
+    match expr {
+        Expr::Try(e) => infer_class(&e.expr),
+        Expr::Await(e) => infer_class(&e.base),
+        Expr::Paren(e) => infer_class(&e.expr),
+        Expr::Cast(c) => match &*c.ty {
+            Type::Path(p)
+                if p.path
+                    .get_ident()
+                    .is_some_and(|i| is_int_name(&i.to_string())) =>
+            {
+                Some(TypeClass::Int)
+            }
+            _ => None,
+        },
+        Expr::MethodCall(c) => {
+            let m = c.method.to_string();
+            let int_read = ["get_", "try_get_", "read_"].iter().any(|p| {
+                m.strip_prefix(p).is_some_and(|rest| {
+                    is_int_name(rest) || rest.ends_with("_le") || rest.ends_with("_be")
+                })
+            });
+            if int_read || matches!(m.as_str(), "len" | "count") {
+                Some(TypeClass::Int)
+            } else if matches!(
+                m.as_str(),
+                "map_err" | "unwrap" | "expect" | "ok_or" | "ok_or_else" | "unwrap_or_default"
+            ) {
+                infer_class(&c.receiver)
+            } else {
+                None
+            }
+        }
+        Expr::Call(c) => {
+            let Expr::Path(f) = &*c.func else { return None };
+            let segs = &f.path.segments;
+            if segs.len() < 2 {
+                return None;
+            }
+            let ty = segs[segs.len() - 2].ident.to_string();
+            let ctor = segs[segs.len() - 1].ident.to_string();
+            // `Self::token_from_login(..)` could return anything; only plain
+            // conversions and constructors say the result is a value of `ty`.
+            if ty == "Self"
+                || !(matches!(ctor.as_str(), "new" | "from" | "try_from" | "parse")
+                    || ctor.starts_with("from_"))
+            {
+                return None;
+            }
+            ty.chars()
+                .next()
+                .is_some_and(char::is_uppercase)
+                .then_some(TypeClass::Opaque(ty))
+        }
+        _ => None,
+    }
+}
+
+fn is_int_name(s: &str) -> bool {
+    let s = s
+        .strip_suffix("_le")
+        .or_else(|| s.strip_suffix("_be"))
+        .unwrap_or(s);
+    matches!(
+        s,
+        "u8" | "u16"
+            | "u32"
+            | "u64"
+            | "u128"
+            | "usize"
+            | "i8"
+            | "i16"
+            | "i32"
+            | "i64"
+            | "i128"
+            | "isize"
+    )
+}
+
 fn mentions_public(tokens: TokenStream) -> bool {
     tokens.into_iter().any(|tt| match tt {
         TokenTree::Ident(i) => is_public_name(&i.to_string()),
@@ -322,6 +408,17 @@ impl LogVisitor<'_> {
             }
         }
         if !t.exposes_secret && matches!(class, Some(TypeClass::Redacting | TypeClass::Static)) {
+            return None;
+        }
+        // An integer is an id, a count or an enum discriminant (`api_key` in a Kafka
+        // header); a seed is only a secret when it feeds one, which this rule cannot see.
+        if !t.exposes_secret && class == Some(TypeClass::Int) {
+            return None;
+        }
+        // Whether a value of some other type leaks is decided by that type's own
+        // `Debug`, which CA010 checks where the type is defined. Only an explicit
+        // encode or `expose_secret()` shows it was meant as text.
+        if !t.exposes_secret && !t.explicit && matches!(class, Some(TypeClass::Opaque(_))) {
             return None;
         }
         let strength = if t.name.is_empty() || is_ciphertext_name(&t.name) {
@@ -566,6 +663,9 @@ impl<'ast> Visit<'ast> for LogVisitor<'_> {
             // `let derived_key = key.public_key();` holds public material.
             if mentions_public(init.expr.to_token_stream()) {
                 self.locals.insert(p.ident.to_string(), TypeClass::Static);
+            }
+            if let Some(class) = infer_class(&init.expr) {
+                self.locals.entry(p.ident.to_string()).or_insert(class);
             }
             // `let key = SecretString::new(..)` redacts.
             if let Expr::Call(c) = &*init.expr {

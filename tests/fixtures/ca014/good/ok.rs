@@ -44,3 +44,20 @@ struct Session {
 fn field_redacts(s: &Session) {
     info!("session {:?}", s.token);
 }
+
+// An integer is an id, a count or an enum discriminant, not key material.
+fn ids(api_key_num: i16, seed: u64) {
+    warn!("unknown request api: {api_key_num}");
+    info!("seeding the RNG from {seed}");
+}
+
+// `ApiKey` is an enum built from a number; what a typed value prints is decided
+// by its own `Debug`, which CA010 checks.
+fn typed(buf: &mut Buf) {
+    let api_key = ApiKey::try_from(buf.try_get_i16()?)?;
+    debug!("request api {:?}", api_key);
+}
+
+fn temp_dir(private_tmp: &str) {
+    warn!("failed to remove {}", private_tmp);
+}

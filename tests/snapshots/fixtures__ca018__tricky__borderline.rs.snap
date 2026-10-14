@@ -2,4 +2,4 @@
 source: tests/fixtures.rs
 expression: snap
 ---
-4:22 CA018 [medium/medium] `.unwrap()` on `open(..)`: an authentication failure is expected input, and here it panics
+
