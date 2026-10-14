@@ -50,6 +50,7 @@ struct Cli {
 enum Format {
     Human,
     Json,
+    Sarif,
 }
 
 fn main() -> ExitCode {
@@ -119,6 +120,7 @@ fn run(cli: Cli) -> anyhow::Result<ExitCode> {
             report::human(&report, &shown, hidden, cli.min_confidence)
         ),
         Format::Json => println!("{}", report::json(&report, &shown)?),
+        Format::Sarif => println!("{}", report::sarif(&report, &shown)?),
     }
     let failed = shown.iter().any(|f| f.severity >= cli.fail_on);
     Ok(if failed {
