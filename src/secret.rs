@@ -105,6 +105,19 @@ const EXCLUDED: &[&str] = &[
     "names",
     "path",
     "file",
+    "tmp",
+    // Handles and slots address a secret; they are not the secret.
+    "handle",
+    "handles",
+    "slot",
+    // XOR obfuscation keys are not secrets.
+    "xor",
+    "obfuscation",
+    "obfuscated",
+    "temp",
+    "dir",
+    "directory",
+    "folder",
     "type",
     "kind",
     "version",
@@ -217,6 +230,7 @@ pub fn is_public_name(name: &str) -> bool {
                 | "pubkey"
                 | "pk"
                 | "verifying"
+                | "verification"
                 | "vk"
                 | "encap"
                 | "encapsulation"

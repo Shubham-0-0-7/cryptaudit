@@ -1,7 +1,7 @@
-// A method named `open` on a file-like type: generic name, medium confidence,
-// and a documented false positive.
+// An `open` with one argument opens a file or a device; an AEAD `open` takes a
+// nonce and a ciphertext. Not reported.
 fn open_file(vault: &Vault) -> Handle {
-    vault.open("db").unwrap() // expect: CA018 medium
+    vault.open("db").unwrap()
 }
 
 // `unwrap` further down the chain is not the crypto result itself.

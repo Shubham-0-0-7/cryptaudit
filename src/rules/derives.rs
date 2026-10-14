@@ -55,10 +55,10 @@ Fix: `#[serde(skip)]` on the secret field, or a newtype with a redacting
 `Serialize` impl. Fields with `skip`, `skip_serializing`, `serialize_with`
 or `with` are not reported.
 
-Confidence: high when the type is itself named like a secret (`SessionKey`,
-`StaticSecret`); low when it is an ordinary record that has a secret-named
-field (`Config { api_key }`), because most such records exist to be
-serialised. Low findings are hidden unless `--min-confidence low` is given.
+Confidence: high when the type is itself named like a clear secret
+(`SessionKey`, `StaticSecret`); low when it is an ordinary record
+(`Config { api_key }`, `TokenRequest`, `Credentials`), because most such
+records exist to be serialised. Low findings are hidden unless `--min-confidence low` is given.
 
 False positives: a type that is meant to be written to an encrypted
 keystore or config file on purpose. Suppress those with a comment saying why.
@@ -169,7 +169,7 @@ impl Rule for DeriveRule {
                 // config, a stored session) exists to be serialised. Only a type
                 // that is itself named like a secret (`StaticSecret`, `Password`)
                 // is a clear leak.
-                if self.derive == "Serialize" && classify_name(&hit.ty).is_none() {
+                if self.derive == "Serialize" && classify_name(&hit.ty) != Some(Strength::Strong) {
                     confidence = confidence.min(Confidence::Low);
                 }
                 let message = (self.message)(&hit);

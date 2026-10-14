@@ -157,7 +157,8 @@ fn name_evidence(name: &str) -> Option<Evidence> {
     let has = |list: &[&str]| ws.iter().any(|w| list.contains(&w.as_str()));
     if has(&["mac", "hmac", "cmac", "poly1305", "ghash"]) {
         Some(Evidence::Strong)
-    } else if has(&["tag", "tags", "digest"]) {
+    } else if has(&["tag", "tags", "digest"]) && !has(&["key"]) {
+        // `key_tag` is a DNSSEC identifier, not an authentication tag.
         Some(Evidence::Weak)
     } else {
         None
@@ -208,8 +209,30 @@ fn evidence(expr: &Expr, env: &Env) -> Option<Evidence> {
             let Expr::Path(f) = &*c.func else { return None };
             let last = f.path.segments.last()?.ident.to_string();
             if API_METHODS.contains(&last.as_str()) {
-                // `Sha256::digest(data)`, `Hmac::finalize(mac)`
-                Some(Evidence::Api)
+                // `Sha256::digest(data)` hashes data the attacker may already know
+                // (a certificate, a download), so it is not a MAC; `Hmac::finalize(mac)` is.
+                let hash_fn = f.path.segments.len() >= 2 && {
+                    let ty = f.path.segments[f.path.segments.len() - 2]
+                        .ident
+                        .to_string()
+                        .to_lowercase();
+                    [
+                        "sha",
+                        "md5",
+                        "md4",
+                        "blake",
+                        "ripemd",
+                        "whirlpool",
+                        "digest",
+                    ]
+                    .iter()
+                    .any(|h| ty.starts_with(h))
+                };
+                Some(if hash_fn {
+                    Evidence::Weak
+                } else {
+                    Evidence::Api
+                })
             } else if ENCODERS.contains(&last.as_str()) {
                 c.args.first().and_then(|a| evidence(a, env))
             } else {

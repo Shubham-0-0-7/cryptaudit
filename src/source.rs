@@ -81,6 +81,21 @@ impl VisitMut for StripTests {
         }
         visit_mut::visit_item_mod_mut(self, module);
     }
+
+    /// `#[cfg(test)] fn for_test() -> Self` inside an `impl` block.
+    fn visit_item_impl_mut(&mut self, imp: &mut syn::ItemImpl) {
+        imp.items.retain(|item| {
+            let attrs: &[Attribute] = match item {
+                syn::ImplItem::Fn(i) => &i.attrs,
+                syn::ImplItem::Const(i) => &i.attrs,
+                syn::ImplItem::Type(i) => &i.attrs,
+                syn::ImplItem::Macro(i) => &i.attrs,
+                _ => &[],
+            };
+            !attrs.iter().any(is_test_attr)
+        });
+        visit_mut::visit_item_impl_mut(self, imp);
+    }
 }
 
 fn is_test_item(item: &Item) -> bool {

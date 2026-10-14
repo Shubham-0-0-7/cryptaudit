@@ -3,10 +3,10 @@ source: tests/fixtures.rs
 expression: snap
 ---
 7:44 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
-12:23 CA021 [high/high] MAC or digest compared with `!=`, which is not constant time: an attacker can recover the tag byte by byte
-17:31 CA021 [high/high] MAC or digest compared with `!=`, which is not constant time: an attacker can recover the tag byte by byte
-24:10 CA021 [high/medium] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
-28:54 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
-32:26 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
-36:14 CA021 [high/medium] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
-44:18 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+14:23 CA021 [high/low] MAC or digest compared with `!=`, which is not constant time: an attacker can recover the tag byte by byte
+19:31 CA021 [high/high] MAC or digest compared with `!=`, which is not constant time: an attacker can recover the tag byte by byte
+26:10 CA021 [high/medium] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+30:54 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+34:26 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+38:14 CA021 [high/medium] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
+46:18 CA021 [high/high] MAC or digest compared with `==`, which is not constant time: an attacker can recover the tag byte by byte
