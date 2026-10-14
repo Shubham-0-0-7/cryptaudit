@@ -4,6 +4,7 @@
 |---|---|
 | `ca010.rs` | CA010 (also holds item/field helpers shared by CA011-013 and CA015) |
 | `derives.rs` | CA011 `Copy`, CA012 `Serialize`, CA013 `PartialEq` on secret types |
+| `logging.rs` | CA014 secret passed to a logging, printing or error macro, or recorded by `#[instrument]` |
 | `zeroize.rs` | CA015 missing zeroization, CA016 optimiser-elided wipe |
 | `results.rs` | CA018 `unwrap` on decrypt/verify, CA019 discarded verify result |
 | `compare.rs` | CA020 `assert_eq!` on MACs, CA021 `==` on MACs |

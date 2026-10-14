@@ -1,0 +1,9 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+5:23 CA014 [high/low] `token` is passed to `info!`, so the value ends up in the logs
+6:21 CA014 [high/low] `key` is passed to `info!`, so the value ends up in the logs
+11:31 CA014 [high/low] `password` is passed to `println!`, so the value ends up in the terminal output
+16:21 CA014 [high/low] `key` is passed to `info!`, so the value ends up in the logs
+22:25 CA014 [high/medium] `new_passphrase` is passed to `eprintln!`, so the value ends up in the terminal output
