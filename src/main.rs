@@ -25,7 +25,7 @@ struct Cli {
     #[arg(long, value_enum, default_value_t = Severity::Low)]
     fail_on: Severity,
 
-    /// Also scan tests/, benches/, examples/ and #[cfg(test)] code
+    /// Also scan tests/, benches/, examples/, xtask/, build.rs and #[cfg(test)] code
     #[arg(long)]
     include_tests: bool,
 

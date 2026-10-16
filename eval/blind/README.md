@@ -31,3 +31,5 @@ fixes and before any round 5 fix. Same columns as `labels_round2.csv`. The crate
 are application-services, aws-lc-rs, cargo, ente, lldap, meilisearch, quiche,
 rust-bitcoin, s2n-quic, sudo-rs, tmkms and vodozemac. The scan ran on the default
 branch heads on 2026-10-16; the `commit` column gives each SHA.
+The labels were written before the round 5 fix pass and are not edited by it; the
+fix pass is described in `../triage.md`, and a sixth round on new crates will measure it.

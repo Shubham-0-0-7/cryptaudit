@@ -560,8 +560,43 @@ hardening results here: keys that have to be serialised or held in memory, with 
 weakest rule on this set (8%): it needs a way to tell a secret compared on attacker input from a
 record that merely holds one.
 
-No fixes have been made yet. They would be written against this sample, so the next honest
-number needs a sixth set of crates.
+### Round 5 fix pass
+
+These changes were written against the round 5 sample, so they cannot be measured on it. They
+are checked two ways: no labelled true positive or hardening finding may disappear, and nothing
+new may appear. A sixth set of crates is the only honest number.
+
+| Change | Rule(s) | Removes |
+|---|---|---|
+| `location`, `variable`, `var`, `env`, `field`, `primary`, `phase`, `time`, `timestamp`, `changed`, `created`, `modified`, `updated` name a place, a counter or a time, not a secret | all name-based rules | `api_key_variable`, `PrivateKeyLocation`, `primary_key`, `time_password_changed`, `password_field` |
+| Types named `*Paths`, `*Path`, `*Location` hold where a secret is, so they are skipped | CA010, CA011, CA012, CA013, CA015 | the TLS key-file paths struct |
+| A type whose last word is `Request`, `Response`, `Args`, `Opts`, `Options`, `Params`, `Payload` or `Form` is a record; its name no longer makes it a secret, and an integer named `seed` in it is dropped | CA010, CA012, CA013, CA015 | `PasswordRequest`-style bodies, the OpenAI `seed` fields |
+| A hand-written `Debug` that passes a field through a closure returning a literal (`.map(\|_\| "[REDACTED]")`) does not leak it | CA010 | `AuthResponse` in ente, and the same pattern in firezone and librustzcash |
+| Derived `PartialEq` is low confidence unless the type is named like a secret, a leaking field holds bytes, or a field is a `password`, `passphrase` or `secret` | CA013 | the API-key records (meilisearch `Remote`, `EmbedderOptions`, task records) |
+| `#[derive(Parser)]`, `Args` and `Subcommand` (clap) are command-line options, not secrets held in memory | CA015 | `CliOpts`, `AddArgs`, `RunOpts` |
+| `build.rs` and `xtask/` are skipped like tests (`--include-tests` scans them) | all | a checksum of a public download, an asset-file checksum |
+| `encdec`, `encryptor`, `encrypter`, `decryptor`, `cipher`, `aead` are not nonces, also when written `self.encdec` | CA028 | `self.encdec.as_ref()` |
+
+**Checks.**
+
+- Of the 52 labelled round 5 findings, all 16 true-positive and hardening findings are still reported.
+  24 of the 36 false-positive and tool-code findings are gone; 28 findings remain, 16 of them correct.
+  On this sample that reads 57%, which is what the fixes were written against and not a precision figure.
+- Against the previous binary on the 12 round 4 and 12 round 5 crates, 79 findings at medium or high
+  confidence disappear (568 to 489) and none appears. Of those 79, 28 were labelled false positive or
+  tool code (23 and 5), none was labelled true positive or hardening, and 51 were never labelled. I read the
+  51 by name: they are the same causes (redacting closures, request seeds, command-line options, API-key
+  records dropped to low). That is one reader and not a labelling, so it is not counted in any number.
+- One CA013 true-hardening finding from round 4 (a mail-server account whose `secret: Option<String>` is
+  compared with the derived `==`) was lost by the first version of the CA013 change. The rule now keeps
+  a `secret`, `password` or `passphrase` string at high confidence.
+
+**Still wrong after the pass** (12 of the 52, the causes the name heuristic cannot see):
+a diagnostic qlog event for key material; `seed` and token counts in a fine-tuning job record, which is not a
+`*Request`; a schema copy in an upgrade tool; a server-sent TOTP secret in a response type; a password and its
+confirmation in a browser form; a `Vec<u32>` of protocol versions in a type named `CredentialHello`; a database
+record key buffer; a QUIC address-validation token; a field naming a private-browsing search engine; a
+hash of a host name in a `known_hosts` check; a public protocol salt; and a deliberately reproducible seed.
 
 ## Caveat
 

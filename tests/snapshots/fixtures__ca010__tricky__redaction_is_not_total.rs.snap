@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+12:30 CA010 [high/medium] `impl Debug for Session` formats secret `self.token.as_ref()`

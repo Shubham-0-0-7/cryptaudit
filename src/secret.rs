@@ -136,6 +136,23 @@ const EXCLUDED: &[&str] = &[
     "label",
     "error",
     "err",
+    // Where a secret lives, or what it is called, is not the secret: `key_file_location`,
+    // `api_key_variable`, `password_field`.
+    "location",
+    "locations",
+    "variable",
+    "var",
+    "env",
+    "field",
+    // A database primary key, and counters or times that sit next to a secret.
+    "primary",
+    "phase",
+    "time",
+    "timestamp",
+    "changed",
+    "created",
+    "modified",
+    "updated",
     // Public parts of a protocol: certificates, OCSP staples, KEM ciphertexts.
     "ocsp",
     "cert",
@@ -239,6 +256,14 @@ pub fn is_public_name(name: &str) -> bool {
     })
 }
 
+/// True if a type name says it holds where something is, not the thing:
+/// `TlsCertificatePaths { private_key: &str }`, `PrivateKeyLocation`.
+pub fn is_place_name(name: &str) -> bool {
+    words(name)
+        .last()
+        .is_some_and(|w| matches!(w.as_str(), "paths" | "path" | "location" | "locations"))
+}
+
 /// True if the only secret-sounding word is `token`: a lexer token, a ciphertext
 /// blob called `raw_token`, a bearer token that is public. Weaker than `key`.
 pub fn is_token_only(name: &str) -> bool {
@@ -247,6 +272,40 @@ pub fn is_token_only(name: &str) -> bool {
         && !ws.iter().any(|w| {
             STRONG.contains(&w.as_str()) || matches!(w.as_str(), "key" | "keys" | "keypair")
         })
+}
+
+/// Words that end a type name when the type only carries values: a request, a
+/// response, command-line arguments, a form. `PasswordRequest` is a request, not
+/// a password.
+const RECORD_WORDS: &[&str] = &[
+    "request",
+    "response",
+    "req",
+    "resp",
+    "args",
+    "opts",
+    "options",
+    "params",
+    "parameters",
+    "payload",
+    "form",
+];
+
+/// True if the type name ends in a word that says it carries values for someone else.
+pub fn is_record_name(name: &str) -> bool {
+    words(name)
+        .last()
+        .is_some_and(|w| RECORD_WORDS.contains(&w.as_str()))
+}
+
+/// Like `classify_name`, for a type. A type named after what it carries
+/// (`PasswordRequest`) says nothing about its fields; they speak for themselves.
+pub fn classify_type_name(name: &str) -> Option<Strength> {
+    if is_record_name(name) {
+        None
+    } else {
+        classify_name(name)
+    }
 }
 
 /// Classifies a field, variable or type name.
@@ -413,7 +472,9 @@ mod tests {
             ("key_id", None), ("kid", None), ("key_len", None), ("nonce", None), ("iv", None),
             ("salt", None), ("password_hash", None), ("token_kind", None), ("TokenType", None),
             ("secret_len", None), ("key_path", None), ("KeyError", None), ("key_size", None),
-            ("seed_len", None),
+            ("seed_len", None), ("api_key_variable", None), ("PrivateKeyLocation", None),
+            ("primary_key", None), ("key_phase", None), ("time_password_changed", None),
+            ("password_field", None),
             // Not secret at all; `key` must match as a whole word.
             ("keyboard", None), ("monkey", None), ("hotkey", None), ("tokenizer", None),
             ("value", None), ("username", None), ("data", None), ("inner", None),
@@ -437,6 +498,8 @@ mod tests {
         for n in ["SecretKey", "SigningKey", "Publisher", "Session", "key"] {
             assert!(!is_public_name(n), "{n}");
         }
+        assert!(is_place_name("TlsCertificatePaths") && is_place_name("PrivateKeyLocation"));
+        assert!(!is_place_name("SecretKey") && !is_place_name("Pathfinder"));
         for n in ["raw_token", "token", "access_token", "Token", "tokens"] {
             assert!(is_token_only(n), "{n}");
         }
@@ -444,6 +507,24 @@ mod tests {
         for n in ["token_key", "secret_token", "api_key", "key", "password"] {
             assert!(!is_token_only(n), "{n}");
         }
+    }
+
+    #[test]
+    fn record_names() {
+        for n in [
+            "PasswordRequest",
+            "TokenResponse",
+            "AddArgs",
+            "CliOpts",
+            "LoginForm",
+        ] {
+            assert!(is_record_name(n), "{n}");
+            assert_eq!(classify_type_name(n), None, "{n}");
+        }
+        for n in ["StaticSecret", "RequestKey", "Responder", "SessionKey"] {
+            assert!(!is_record_name(n), "{n}");
+        }
+        assert_eq!(classify_type_name("StaticSecret"), Some(Strength::Strong));
     }
 
     #[test]

@@ -13,7 +13,10 @@ use super::bytes::{macro_idents, root_var};
 use super::ca010::{Items, derive_span, fallback_owner, field_confidence};
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::secret::{TypeClass, classify_name, classify_type, is_public_name, is_token_only};
+use crate::secret::{
+    TypeClass, classify_name, classify_type, classify_type_name, is_place_name, is_public_name,
+    is_token_only,
+};
 use crate::source::ParsedFile;
 
 pub static MISSING_META: RuleMeta = RuleMeta {
@@ -50,6 +53,9 @@ Fix: `#[derive(Zeroize, ZeroizeOnDrop)]`, or hold the value in
 
 Confidence is at most medium: the name heuristic is the main source of false
 positives.
+
+Command-line option structs (`#[derive(Parser)]`, `Args`, `Subcommand`) and
+types named for a place (`*Paths`, `*Location`) are not reported.
 
 Known false positives: a field named like a secret that is public data, and
 buffers whose ownership is handed to a callee that wipes them.
@@ -187,10 +193,12 @@ fn struct_finding(
         || is_repr_c(&s.attrs)
         || derive_span(&s.attrs, "Copy").is_some()
         || is_public_name(&name)
+        || is_place_name(&name)
+        || derives_cli_parser(&s.attrs)
     {
         return None;
     }
-    let owner = fallback_owner(classify_name(&name), &s.fields);
+    let owner = fallback_owner(classify_type_name(&name), &s.fields);
     let mut leaks: Vec<(String, Confidence)> = Vec::new();
     for (i, f) in s.fields.iter().enumerate() {
         // A borrowed slice is not owned: the caller decides how it is wiped.
@@ -222,6 +230,14 @@ fn struct_finding(
         ),
         "add `#[derive(Zeroize, ZeroizeOnDrop)]`, or hold the value in `zeroize::Zeroizing`",
     ))
+}
+
+/// `#[derive(Parser)]`, `Args`, `Subcommand` (clap): command-line options. The process
+/// exits after use, and the shell already holds the arguments.
+fn derives_cli_parser(attrs: &[syn::Attribute]) -> bool {
+    ["Parser", "Args", "Subcommand"]
+        .iter()
+        .any(|d| derive_span(attrs, d).is_some())
 }
 
 fn mentions_protected(ty: &str, protected: &HashSet<String>) -> bool {

@@ -13,8 +13,8 @@ use syn::{
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::secret::{
-    Strength, TypeClass, classify_name, classify_type, is_ciphertext_name, is_excluded,
-    is_public_name, is_size_name,
+    Strength, TypeClass, classify_name, classify_type, classify_type_name, is_ciphertext_name,
+    is_excluded, is_place_name, is_public_name, is_record_name, is_size_name,
 };
 use crate::source::ParsedFile;
 
@@ -61,7 +61,12 @@ Confidence:
   low     a field whose type is another named type: whether it leaks
           depends on that type's own Debug impl
 Fields of `secrecy` types, and fields marked `#[debug(skip)]` or
-`#[derivative(Debug = \"ignore\")]`, are not reported.
+`#[derivative(Debug = \"ignore\")]`, are not reported. A hand-written Debug
+that passes the value through a closure returning a literal
+(`.map(|_| \"[REDACTED]\")`) is not reported either. Types named for a place
+(`*Paths`, `*Location`) and integers named `seed` in a `*Request`, `*Response`,
+`*Args` or `*Opts` type are skipped: they describe where a secret is, or a
+sampling setting, not the secret.
 
 Known false positives: `key: Vec<u8>` in a struct where `key` is a map key
 rather than key material.
@@ -134,6 +139,9 @@ pub(super) struct DeriveHit {
     pub ty: String,
     /// `(field label, confidence)`. Enum fields are labelled `Variant::field`.
     pub leaks: Vec<(String, Confidence)>,
+    /// True if at least one leaking field holds raw bytes (a key array, a `Vec<u8>`),
+    /// as opposed to a string or a number.
+    pub bytes: bool,
 }
 
 impl DeriveHit {
@@ -163,33 +171,40 @@ impl DeriveHit {
 pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool) -> Vec<DeriveHit> {
     let mut out = Vec::new();
     for s in &items.structs {
-        if is_public_name(&s.ident.to_string()) {
+        if is_public_name(&s.ident.to_string()) || is_place_name(&s.ident.to_string()) {
             continue;
         }
         if let Some(span) = derive_span(&s.attrs, derive) {
             if derive == "Debug" && has_custom_debug_attr(&s.attrs) {
                 continue;
             }
-            let leaks = leaking_fields(classify_name(&s.ident.to_string()), &s.fields, skip);
+            let name = s.ident.to_string();
+            let leaks = leaking_fields(classify_type_name(&name), &s.fields, skip);
+            let leaks = drop_request_ints(&name, &s.fields, leaks);
             if !leaks.is_empty() {
                 out.push(DeriveHit {
                     span,
-                    ty: s.ident.to_string(),
+                    ty: name,
+                    bytes: leaks_bytes(&s.fields, &leaks),
                     leaks,
                 });
             }
         }
     }
     for e in &items.enums {
-        if is_public_name(&e.ident.to_string()) {
+        if is_public_name(&e.ident.to_string()) || is_place_name(&e.ident.to_string()) {
             continue;
         }
         if let Some(span) = derive_span(&e.attrs, derive) {
-            let enum_strength = classify_name(&e.ident.to_string());
+            let enum_strength = classify_type_name(&e.ident.to_string());
             let mut leaks = Vec::new();
+            let mut bytes = false;
             for v in &e.variants {
                 let strength = enum_strength.max(classify_name(&v.ident.to_string()));
-                for (label, conf) in leaking_fields(strength, &v.fields, skip) {
+                let found = leaking_fields(strength, &v.fields, skip);
+                let found = drop_request_ints(&e.ident.to_string(), &v.fields, found);
+                bytes |= leaks_bytes(&v.fields, &found);
+                for (label, conf) in found {
                     leaks.push((format!("{}::{label}", v.ident), conf));
                 }
             }
@@ -197,12 +212,45 @@ pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool)
                 out.push(DeriveHit {
                     span,
                     ty: e.ident.to_string(),
+                    bytes,
                     leaks,
                 });
             }
         }
     }
     out
+}
+
+/// In a request, response or arguments type, a number named like a secret
+/// (`seed`, a sampling parameter) is a setting, not key material.
+fn drop_request_ints(
+    ty: &str,
+    fields: &Fields,
+    leaks: Vec<(String, Confidence)>,
+) -> Vec<(String, Confidence)> {
+    if !is_record_name(ty) {
+        return leaks;
+    }
+    leaks
+        .into_iter()
+        .filter(|(label, _)| {
+            fields
+                .iter()
+                .enumerate()
+                .find(|(i, f)| {
+                    f.ident.as_ref().map_or(i.to_string(), ToString::to_string) == *label
+                })
+                .is_none_or(|(_, f)| classify_type(&f.ty) != TypeClass::Int)
+        })
+        .collect()
+}
+
+/// Does any of the leaking fields hold raw bytes?
+fn leaks_bytes(fields: &Fields, leaks: &[(String, Confidence)]) -> bool {
+    fields.iter().enumerate().any(|(i, f)| {
+        let label = f.ident.as_ref().map_or(i.to_string(), ToString::to_string);
+        leaks.iter().any(|(l, _)| *l == label) && classify_type(&f.ty) == TypeClass::Bytes
+    })
 }
 
 /// Returns the span of `name` in `#[derive(.., name)]` or
@@ -365,11 +413,11 @@ fn check_manual_impl(
     let Some(self_name) = self_ty.path.segments.last().map(|s| s.ident.to_string()) else {
         return Vec::new();
     };
-    if is_public_name(&self_name) {
+    if is_public_name(&self_name) || is_place_name(&self_name) {
         return Vec::new();
     }
     let def = structs.get(&self_name);
-    let type_strength = classify_name(&self_name);
+    let type_strength = classify_type_name(&self_name);
     let owner = match def {
         Some(d) => fallback_owner(type_strength, &d.fields),
         None => type_strength,
@@ -620,6 +668,10 @@ impl<'ast> Visit<'ast> for SelfHits {
 
     fn visit_expr_method_call(&mut self, call: &'ast ExprMethodCall) {
         let method = call.method.to_string();
+        // `self.token.as_ref().map(|_| "[REDACTED]")`: the closure throws the value away.
+        if call.args.iter().any(is_redacting_closure) {
+            return;
+        }
         if SAFE_METHODS.contains(&method.as_str()) {
             for arg in &call.args {
                 self.visit_expr(arg);
@@ -641,6 +693,23 @@ impl<'ast> Visit<'ast> for SelfHits {
         }
         visit::visit_expr_method_call(self, call);
     }
+}
+
+/// `|_| "[REDACTED]"`: a closure whose body is a string literal, so whatever it is
+/// given never reaches the output.
+fn is_redacting_closure(arg: &Expr) -> bool {
+    fn literal(e: &Expr) -> bool {
+        match e {
+            Expr::Lit(l) => matches!(l.lit, syn::Lit::Str(_)),
+            Expr::Paren(p) => literal(&p.expr),
+            Expr::Block(b) => match b.block.stmts.as_slice() {
+                [syn::Stmt::Expr(e, None)] => literal(e),
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+    matches!(arg, Expr::Closure(c) if literal(&c.body))
 }
 
 /// Follows `let x = <secret read of self>;` so that `x` is treated as secret

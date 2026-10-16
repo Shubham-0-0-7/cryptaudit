@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+5:10 CA012 [high/low] `#[derive(Serialize)]` on `PasswordChangeRequest` serialises secret field `session_token`

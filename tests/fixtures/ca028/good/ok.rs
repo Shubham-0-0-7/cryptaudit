@@ -91,3 +91,11 @@ fn cloned_for_padding(&self, pad: &mut [u8]) {
     let mut rng = self.rng.clone();
     rng.fill_bytes(pad);
 }
+
+// The object that encrypts is passed to a helper; it is not a nonce.
+fn encrypt_many(this: &Store, items: &[Item]) {
+    for item in items {
+        let sealed = item.fields.encrypt(this.encdec.as_ref(), &item.id);
+        let _ = sealed;
+    }
+}
