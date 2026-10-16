@@ -1,0 +1,9 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:13 CA063 [high/medium] `password` is hashed with SHA256: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it
+9:12 CA063 [high/medium] `password` is hashed with SHA256: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it
+14:19 CA063 [high/medium] `passphrase` is hashed with SHA512: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it
+18:26 CA063 [high/medium] `password` is hashed with MD5: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it
+22:13 CA063 [high/medium] `password` is hashed with BLAKE3: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it

@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+5:5 CA062 [medium/low] PBKDF2 with 50000 iterations: too low to slow down an attacker who has stolen the password hashes

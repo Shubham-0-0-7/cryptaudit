@@ -1,0 +1,14 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:10 CA064 [critical/high] `danger_accept_invalid_certs(true)`: TLS certificate validation is switched off, so any server is accepted, including one run by an attacker in the middle
+9:13 CA064 [critical/high] `danger_accept_invalid_certs(true)`: TLS certificate validation is switched off, so any server is accepted, including one run by an attacker in the middle
+14:10 CA064 [critical/high] `dangerous_accept_invalid_certs(true)`: TLS certificate validation is switched off, so any server is accepted, including one run by an attacker in the middle
+19:30 CA064 [critical/high] `disable_verification(true)`: TLS certificate validation is switched off, so any server is accepted, including one run by an attacker in the middle
+24:13 CA064 [critical/high] `DANGER_ACCEPT_INVALID_CERTS` turns off TLS certificate validation, so any server is accepted
+28:10 CA064 [critical/high] `ssl_verify_peer(false)`: TLS certificate validation is switched off, so any server is accepted, including one run by an attacker in the middle
+32:7 CA064 [critical/high] `set_verify(SslVerifyMode::NONE)`: the peer's certificate is not checked, so any server is accepted
+36:7 CA064 [critical/high] `set_verify_callback` with a closure that always returns true: every certificate is accepted
+43:9 CA064 [critical/high] `TcpTls { insecure: .. }`: the server's certificate is not checked
+51:10 CA064 [critical/high] custom certificate verifier `NoCertificateVerification` is named like one that accepts any certificate

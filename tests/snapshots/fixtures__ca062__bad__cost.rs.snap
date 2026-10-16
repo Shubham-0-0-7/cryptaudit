@@ -1,0 +1,10 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+6:5 CA062 [medium/high] PBKDF2 with 100 iterations: too low to slow down an attacker who has stolen the password hashes
+10:13 CA062 [medium/high] PBKDF2 with 500 iterations: too low to slow down an attacker who has stolen the password hashes
+14:5 CA062 [medium/medium] PBKDF2 with 5000 iterations: too low to slow down an attacker who has stolen the password hashes
+18:13 CA062 [medium/medium] PBKDF2 with 1000 iterations: too low to slow down an attacker who has stolen the password hashes
+28:21 CA062 [medium/high] bcrypt cost 4: too low to slow down an attacker who has stolen the password hashes
+29:21 CA062 [medium/medium] bcrypt cost 8: too low to slow down an attacker who has stolen the password hashes

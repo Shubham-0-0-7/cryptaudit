@@ -1,0 +1,10 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:10 CA065 [critical/high] `danger_accept_invalid_hostnames(true)`: TLS hostname verification is switched off, so any server is accepted, including one run by an attacker in the middle
+9:10 CA065 [critical/high] `danger_accept_invalid_hostnames(true)`: TLS hostname verification is switched off, so any server is accepted, including one run by an attacker in the middle
+14:54 CA065 [critical/high] `dangerous_accept_invalid_hostnames(true)`: TLS hostname verification is switched off, so any server is accepted, including one run by an attacker in the middle
+18:13 CA065 [critical/high] `DANGER_ACCEPT_INVALID_HOSTS` turns off TLS hostname verification, so any server is accepted
+22:10 CA065 [critical/high] `ssl_verify_host(false)`: TLS hostname verification is switched off, so any server is accepted, including one run by an attacker in the middle
+26:7 CA065 [critical/high] `set_verify_hostname(false)`: TLS hostname verification is switched off, so any server is accepted, including one run by an attacker in the middle

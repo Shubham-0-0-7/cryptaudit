@@ -1,0 +1,8 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:19 CA024 [high/medium] `Rc4` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
+8:19 CA024 [high/medium] `des` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
+12:19 CA024 [high/medium] `TdesEde3` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
+16:14 CA024 [high/medium] `des_ede3_cbc` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
