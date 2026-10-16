@@ -45,3 +45,13 @@ fn verify_password(cleartext: &str, stored: &[u8]) -> bool {
     let r = hasher.finalize();
     r.as_slice() == stored // expect: CA021 high
 }
+
+// Shape of totp-rs before 1.1.0: the expected code is generated locally and
+// compared with the one the user typed.
+fn check_totp(totp: &Totp, token: &str, step_time: u64) -> bool {
+    totp.generate(step_time) == token // expect: CA021 medium
+}
+
+fn check_code(&self, code: &str) -> bool {
+    code != self.compute_code().as_str() // expect: CA021 medium
+}

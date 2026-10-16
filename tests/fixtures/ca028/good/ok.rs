@@ -79,3 +79,15 @@ mod tests {
         cipher.encrypt(nonce, a).unwrap();
     }
 }
+
+// The generator itself advances, so each call gives new bytes.
+fn advancing_rng(&mut self) {
+    let mut nonce = [0u8; 12];
+    self.rng.fill_bytes(&mut nonce);
+}
+
+// A clone used for something that is not a nonce, IV, salt or key.
+fn cloned_for_padding(&self, pad: &mut [u8]) {
+    let mut rng = self.rng.clone();
+    rng.fill_bytes(pad);
+}

@@ -16,6 +16,7 @@ use syn::{Expr, ExprMethodCall, ItemFn};
 use super::bytes::{ConstCollector, ConstEnv, literal_bytes, macro_idents, mentions_time};
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
+use crate::secret::words;
 use crate::source::ParsedFile;
 
 pub static META: RuleMeta = RuleMeta {
@@ -41,6 +42,10 @@ Reported, within one function:
   * a nonce defined outside a loop and used inside it without being refreshed
   * a nonce that is a literal or a `const`
   * a nonce derived from the clock (`SystemTime::now()`, `Instant::now()`)
+  * a nonce, IV, salt or key filled from a *clone* of the random number
+    generator (`let mut rng = self.rng.clone(); rng.fill_bytes(&mut nonce);`):
+    the clone starts from the same internal state every time, so every call
+    produces the same bytes. This was RUSTSEC-2023-0068 in the `cocoon` crate.
 
 The timestamp nonce deserves its own note. \"Use a timestamp\" fails in four
 ways: two nodes encrypt in the same tick; nanosecond clocks still collide under
@@ -58,6 +63,10 @@ Confidence:
           clock-derived nonce
   low     a literal nonce in a function that also derives its key with a KDF,
           which is a legitimate pattern when the key is unique per message
+
+Known false positive for the cloned-RNG check: `rand::rngs::ThreadRng` shares
+its state between clones, so cloning it is harmless. A seeded `StdRng` is the
+dangerous case.
 
 Known limits: only one function body is analysed, so a nonce reused across a
 function call is missed; two different keys that share a nonce variable are only
@@ -87,6 +96,13 @@ impl Rule for NonceReuse {
             out: Vec::new(),
         };
         v.visit_file(&file.ast);
+        let mut clones = CloneRng {
+            file,
+            rngs: HashSet::new(),
+            out: Vec::new(),
+        };
+        clones.visit_file(&file.ast);
+        v.out.extend(clones.out);
         v.out
     }
 }
@@ -730,5 +746,121 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
         self.in_loop(&e.body, None);
         self.visit_block(&e.body);
         self.loops.pop();
+    }
+}
+
+/// Random-number-generator methods that write into a buffer.
+const RNG_FILL: &[&str] = &["fill_bytes", "try_fill_bytes", "fill", "try_fill"];
+
+/// Names of buffers that must be fresh for every message.
+const FRESH_WORDS: &[&str] = &["nonce", "iv", "salt", "key"];
+
+fn is_rng_name(name: &str) -> bool {
+    words(name)
+        .iter()
+        .any(|w| matches!(w.as_str(), "rng" | "prng" | "csprng" | "rand" | "random"))
+}
+
+/// The receiver of a `.clone()` that is a random number generator: `rng`,
+/// `self.rng`, `&self.rng`.
+fn is_rng_expr(expr: &Expr) -> bool {
+    match expr {
+        Expr::Path(p) => p
+            .path
+            .get_ident()
+            .is_some_and(|i| is_rng_name(&i.to_string())),
+        Expr::Field(f) => match &f.member {
+            syn::Member::Named(n) => is_rng_name(&n.to_string()),
+            syn::Member::Unnamed(_) => is_rng_expr(&f.base),
+        },
+        Expr::Reference(r) => is_rng_expr(&r.expr),
+        Expr::Paren(p) => is_rng_expr(&p.expr),
+        _ => false,
+    }
+}
+
+/// `x.clone()` where `x` is a random number generator.
+fn is_rng_clone(expr: &Expr) -> Option<Span> {
+    match expr {
+        Expr::MethodCall(c) if c.method == "clone" && is_rng_expr(&c.receiver) => {
+            Some(c.method.span())
+        }
+        Expr::Paren(p) => is_rng_clone(&p.expr),
+        _ => None,
+    }
+}
+
+/// A nonce, IV, salt or key filled from a copy of the generator. The copy starts
+/// from the same state on every call, so every call yields the same bytes.
+struct CloneRng<'a> {
+    file: &'a ParsedFile,
+    /// Local names bound to a cloned generator, with where it was cloned.
+    rngs: HashSet<String>,
+    out: Vec<Finding>,
+}
+
+impl CloneRng<'_> {
+    fn check_fill(&mut self, call: &ExprMethodCall) {
+        if !RNG_FILL.contains(&call.method.to_string().as_str()) {
+            return;
+        }
+        let cloned = match &*call.receiver {
+            Expr::Path(p) => p
+                .path
+                .get_ident()
+                .is_some_and(|i| self.rngs.contains(&i.to_string())),
+            other => is_rng_clone(other).is_some(),
+        };
+        if !cloned {
+            return;
+        }
+        let Some(target) = call.args.first().and_then(root_name) else {
+            return;
+        };
+        if !words(&target)
+            .iter()
+            .any(|w| FRESH_WORDS.contains(&w.as_str()))
+        {
+            return;
+        }
+        self.out.push(self.file.finding(
+            &META,
+            Confidence::Medium,
+            call.method.span(),
+            format!(
+                "`{target}` is filled from a clone of the random number generator, so every call produces the same bytes"
+            ),
+            "fill it from the generator itself (`&mut self.rng`), not from a clone; a clone restarts from the same internal state",
+        ));
+    }
+}
+
+impl<'ast> Visit<'ast> for CloneRng<'_> {
+    fn visit_item_fn(&mut self, f: &'ast ItemFn) {
+        self.rngs.clear();
+        visit::visit_item_fn(self, f);
+    }
+
+    fn visit_impl_item_fn(&mut self, f: &'ast syn::ImplItemFn) {
+        self.rngs.clear();
+        visit::visit_impl_item_fn(self, f);
+    }
+
+    fn visit_local(&mut self, local: &'ast syn::Local) {
+        visit::visit_local(self, local);
+        let pat = match &local.pat {
+            syn::Pat::Type(t) => &*t.pat,
+            other => other,
+        };
+        if let (Some(init), syn::Pat::Ident(bound)) = (&local.init, pat) {
+            if is_rng_clone(&init.expr).is_some() {
+                self.rngs.insert(bound.ident.to_string());
+            }
+        }
+    }
+
+    fn visit_expr_method_call(&mut self, call: &'ast ExprMethodCall) {
+        self.check_fill(call);
+        visit::visit_expr_method_call(self, call);
     }
 }

@@ -16,3 +16,5 @@ expression: snap
 65:12 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream
 71:12 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream
 76:9 CA028 [critical/medium] encryption with a hardcoded nonce: every message under this key shares one keystream
+84:9 CA028 [critical/medium] `nonce` is filled from a clone of the random number generator, so every call produces the same bytes
+88:22 CA028 [critical/medium] `iv` is filled from a clone of the random number generator, so every call produces the same bytes
