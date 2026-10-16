@@ -125,7 +125,7 @@ Run `cargo cryptaudit --explain CA013` for the full description of a rule, with 
 
 Each finding has a severity (impact if exploited) and a confidence (how likely it is a true positive). Low-confidence findings are hidden by default, so the first run stays quiet. The rule list is based on a [taxonomy of Rust crypto misuse](docs/taxonomy.md); many patterns in it are specific to Rust, such as derive macros that leak secrets, `Copy` types that cannot be zeroized, and zeroing code that the optimiser removes.
 
-Evaluation on real crates, with every finding labelled true or false positive, is in [eval/triage.md](eval/triage.md).
+Evaluation on real crates, with every finding labelled true or false positive, is in [eval/triage.md](eval/triage.md). Recall on crates with known bugs (RustSec advisories) is in [eval/recall.md](eval/recall.md).
 
 ## How it differs from existing tools
 
@@ -149,7 +149,8 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 - [x] SARIF output (`--format sarif`)
 - [x] First evaluation on real crates ([eval/triage.md](eval/triage.md))
 - [x] Blind evaluation on unseen crates, four rounds, labelled ([eval/blind](eval/blind/README.md))
-- [ ] A fifth blind round to measure precision after the round 4 fixes, and recall on crates with known bugs
+- [x] Recall on crates with known bugs, first pass: 3 of 8 in-scope advisories ([eval/recall.md](eval/recall.md))
+- [ ] A fifth blind round to measure precision after the round 4 fixes
 
 ## Authors
 
