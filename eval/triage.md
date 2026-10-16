@@ -495,6 +495,74 @@ measure the result honestly.
 A correction to an earlier note: the round 4 default view held 354 findings, not
 about 450.
 
+## Fixes made after the recall check
+
+The recall check ([recall.md](recall.md)) found two known bugs that the rules missed. Both gaps were closed.
+
+| Missed bug | Change |
+|---|---|
+| totp-rs 1.0.0: `self.generate(step_time) == token` (CA021) | a value produced by a `generate`, `compute` or `calculate` call, compared with `==` or `!=` against a name such as `token`, `code`, `otp` or `signature`, is reported at medium confidence with its own message ("one-time code or token compared with `==`"). Both halves are required; `generate_id()`, `generate_nonce()` and similar are not counted |
+| cocoon 0.3.3: the RNG is cloned for each call, so every nonce is the same (CA028) | `let mut rng = self.rng.clone(); rng.fill_bytes(&mut nonce)`, and the same call chained directly, is reported at medium confidence when the buffer is named like a nonce, IV, salt or key. Known false positive: `ThreadRng` shares its state between clones |
+
+Both are caught on the vulnerable release and silent on the patched one. They add no
+finding on the 12 round 4 crates or the 6 calibration crates, so they cost no precision
+on those sets. That also means no true positive of either kind was found there: these two shapes
+did not occur in that code, so the rules rest on fixtures and two advisories.
+
+## Blind evaluation, round 5 (new crates, sampled, after the round 4 fixes)
+
+The point of this round is to measure precision on crates that no fix was written against.
+Twelve crates that no earlier round used: application-services, aws-lc-rs, cargo, ente,
+lldap, meilisearch, quiche, rust-bitcoin, s2n-quic, sudo-rs, tmkms, vodozemac. The scan used
+`--no-suppress --min-confidence low` on the default branch heads of 2026-10-16
+(commits in [blind/labels_round5.csv](blind/labels_round5.csv)). The default view has 269 findings.
+A seeded sample (20261016, up to 12 per rule) gave 52 findings, labelled by one person
+(the author of the tool, which is a bias; a second labeller is still to do) before any fix.
+
+| Rule | n | TP | TH | NP | FP | Strict precision |
+|---|---|---|---|---|---|---|
+| CA010 | 12 | 5 | 0 | 1 | 6 | 42% |
+| CA011 | 2 | 1 | 0 | 0 | 1 | 50% |
+| CA012 | 8 | 0 | 4 | 0 | 4 | 50% |
+| CA013 | 12 | 0 | 1 | 2 | 9 | 8% |
+| CA015 | 12 | 0 | 5 | 2 | 5 | 42% |
+| CA020, CA021, CA027, CA028, CA071 | 1, 2, 1, 1, 1 | 0 | 0 | 0 | 6 | 0% |
+| **All** | **52** | **6** | **10** | **5** | **31** | **31%** (16/52) |
+
+Strict precision is (TP + TH) / n. Counting true positives only it is 12% (6/52).
+
+**Precision on unseen crates, by round:** 31% in round 1, 27% in round 4 before its fixes, 31% in round 5 after them.
+The round 4 fixes lifted the number on the sample they were written against, from 27% to 45%, but
+that did not carry over: on new crates it is back at about 31%. The fixes removed the
+false-positive causes seen in round 4; round 5 found different ones. Shape of the tool's
+problem: most false positives come from the name heuristic, and every set of crates brings new names.
+
+### Why the false positives happen
+
+| n | Cause | Rules | Fixable by name rules? |
+|---|---|---|---|
+| 14 | not a secret at all: a seed or token *count* in an OpenAI request, a path to a key file, the name of an environment variable, a timestamp, protocol version numbers, a database record key, a QUIC address-validation token, a search engine name, a form field name | CA010, CA011, CA012, CA013, CA015 | yes, more excluded words and a rule that `*_variable`, `*_path`, `*_location` name a place, not a value |
+| 5 | derived `PartialEq` on a configuration, task or view record that holds an API key, never compared on attacker input | CA013 | partly: most CA013 false positives are records of this kind |
+| 3 | a request or response body that exists to carry the secret to the server or the user | CA012 | yes: skip structs named `*Request` / `*Response` unless the type name is a clear secret |
+| 3 | a hash or checksum of public data (a download, a known_hosts entry, an asset file) | CA020, CA021 | partly |
+| 2 | a public protocol constant (an HKDF salt) or a deliberately reproducible seed | CA027, CA071 | no |
+| 1 | a password and its confirmation compared in a browser form | CA013 | no |
+| 1 | a qlog event type that exists to record key material | CA010 | no |
+| 1 | a hand-written `Debug` that already redacts with a closure (`.map(|_| "[REDACTED]")`) | CA010 | yes |
+| 1 | `self.encdec.encrypt(..)` treated as a nonce because the first argument is a field | CA028 | yes: `encdec`, `encryptor` are not nonces |
+
+### What was found
+
+True positives are all about secrets in types: a `String` access token, the private EC key of a push
+subscription, a passkey recovery secret and a Meilisearch export API key, each printed by a derived `Debug`
+(CA010), and a 256-bit ChaCha20 key that is `Copy` (CA011) in rust-bitcoin. CA012 and CA015 mostly give
+hardening results here: keys that have to be serialised or held in memory, with no sink shown. CA013 is the
+weakest rule on this set (8%): it needs a way to tell a secret compared on attacker input from a
+record that merely holds one.
+
+No fixes have been made yet. They would be written against this sample, so the next honest
+number needs a sixth set of crates.
+
 ## Caveat
 
 Precision here is measured on repositories that were chosen because they are

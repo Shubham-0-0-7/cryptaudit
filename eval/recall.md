@@ -21,11 +21,13 @@ The advisory list was filtered by keyword (`debug`, `log`, `constant time`, `non
 | RUSTSEC-2022-0087 | slack-morphism 1.3.1 → 1.3.2 | webhook URL (a secret) written to the debug log | CA014 | Missed |
 | RUSTSEC-2026-0275 | azure_core 0.21.0 → 0.22.0 | `debug!("... {request:#?}")` writes the `authorization` header | CA014 | Missed |
 | RUSTSEC-2024-0358 | object_store 0.10.1 → 0.10.2 | web-identity token request logged | CA014 | Missed |
-| RUSTSEC-2022-0018 | totp-rs 1.0.0 → 1.1.0 | `self.generate(t) == token` compares a 2FA code with `==` | CA021 | Missed |
-| RUSTSEC-2023-0068 | cocoon 0.3.3 → 0.4.0 | the RNG is cloned for every encryption, so every nonce is the same | CA028 | Missed |
+| RUSTSEC-2022-0018 | totp-rs 1.0.0 → 1.1.0 | `self.generate(t) == token` compares a 2FA code with `==` | CA021 | Missed; **caught after the fix below** (`lib.rs:157`, medium, none in 1.1.0) |
+| RUSTSEC-2023-0068 | cocoon 0.3.3 → 0.4.0 | the RNG is cloned for every encryption, so every nonce is the same | CA028 | Missed; **caught after the fix below** (`lib.rs:725-731`, medium, none in 0.4.0) |
 | RUSTSEC-2024-0010 | svix 1.16.0 → 1.17.0 | hand-written constant-time compare ignores length | none | Out of scope |
 
-**In scope: 3 of 8 caught (38%).** Counting the out-of-scope case, 3 of 9.
+**In scope: 3 of 8 caught (38%) on the first pass.** Counting the out-of-scope case, 3 of 9.
+
+**After the two rule changes below: 5 of 8 (63%).** Be careful with this second number: the two rules were written after seeing these two bugs, so it shows the gaps are closed, not that recall on new bugs is 63%. The first-pass 38% is the honest estimate; the remaining three misses are the ones that need knowledge the tool does not have.
 
 ## What the misses have in common
 
@@ -35,13 +37,13 @@ The three catches are all `#[derive(Debug)]` on a struct with a field named like
 - **totp-rs.** The compared value is called `token` and the other side is the result of `generate(..)`. CA021 only recognises MAC and digest names.
 - **cocoon.** The nonce is produced correctly, but from a cloned RNG, so the same bytes come out each time. CA028 looks for the same nonce variable used twice, not for an RNG whose state is thrown away.
 
-## Possible rule changes
+## Rule changes made
 
-These are candidates, not implemented. Each would need its own fixtures and a precision check on the blind sets before it ships.
+- **CA021 (done):** `==` between a value from `generate`, `compute` or `calculate` and a parameter named `token`, `code`, `otp` or `signature`. Medium confidence, own message.
+- **CA028 (done):** an RNG that is `.clone()`d and then used to fill a buffer named like a nonce, IV, salt or key. Medium confidence.
+- **CA014 (not done):** flag `{:?}` or `{:#?}` of a value whose type is an HTTP request or header map. Three of the misses are of this kind, but it would risk many false positives and needs its own blind check first.
 
-- **CA021:** treat `==` between a value from `generate`, `compute` or `expected` and a parameter named `token`, `code` or `otp` as a comparison of secrets.
-- **CA028:** flag an RNG that is `.clone()`d and then used to fill a nonce or IV.
-- **CA014:** flag `{:?}` or `{:#?}` of a value whose type is an HTTP request or header map. This one risks many false positives.
+Both finished changes were also run on the 12 round 4 crates and the 6 calibration crates: no new finding there, so no precision cost on those sets. Details are in [triage.md](triage.md).
 
 ## Limits
 

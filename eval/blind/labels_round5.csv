@@ -1,0 +1,53 @@
+id,repo,commit,rule,confidence,location,label,reason
+0,application-services,24417f0,CA010,high,components/sync15/src/client/storage_client.rs:121,TP,API access token held in a String and printed by derived Debug
+1,quiche,c06ccd6,CA010,high,qlog/src/events/quic.rs:1152,FP,qlog event type that exists to record key material for diagnostics; key_phase is a counter
+2,meilisearch,541dd6e,CA010,high,crates/xtask/src/common/command.rs:15,FP,"name of an environment variable, not the key"
+3,meilisearch,541dd6e,CA010,high,crates/meilisearch-types/src/tasks/mod.rs:799,TP,Export task details hold the remote API key and derive Debug (primary_key is a database key)
+4,meilisearch,541dd6e,CA010,high,external-crates/async-openai/src/types/fine_tuning.rs:204,FP,OpenAI token counts and a sampling seed
+5,lldap,99c510a,CA010,medium,crates/sql-backend-handler/src/sql_tables.rs:64,FP,"where the key file is (a path), not the key"
+6,meilisearch,541dd6e,CA010,high,crates/meilitool/src/upgrade/v1_9.rs:67,NP,API key in a schema copy used by the upgrade tool
+7,ente,e0102a2,CA010,medium,rust/apps/cli/src/api/models.rs:101,FP,hand-written Debug already redacts the token with a closure
+8,application-services,24417f0,CA010,high,components/push/src/internal/storage/record.rs:14,TP,PushRecord holds the private EC key bytes and derives Debug
+9,meilisearch,541dd6e,CA010,high,external-crates/async-openai/src/types/chat.rs:727,FP,sampling seed of a chat request
+10,ente,e0102a2,CA010,high,rust/crates/accounts/src/models.rs:365,TP,passkey recovery secret and cipher held in a String and printed by derived Debug
+11,ente,e0102a2,CA010,high,rust/crates/space/src/models.rs:33,TP,space access key printed by derived Debug
+12,quiche,c06ccd6,CA011,high,tokio-quiche/src/settings/tls.rs:28,FP,"paths to the certificate and key file, not the key"
+13,rust-bitcoin,73db3a0,CA011,high,chacha20_poly1305/src/chacha20.rs:25,TP,256-bit ChaCha20 key is Copy
+14,application-services,24417f0,CA012,high,components/fxa-client/src/internal/commands/keys.rs:21,TH,private command keys must be serialised to be stored; no sign of an unprotected sink
+15,lldap,99c510a,CA012,medium,crates/sql-backend-handler/src/sql_tables.rs:64,FP,"where the key file is (a path), not the key"
+16,vodozemac,70ad23e,CA012,high,src/olm/session/root_key.rs:47,TH,root key serialised for the session pickle; the pickle is encrypted
+17,ente,e0102a2,CA012,high,rust/crates/legacy/src/kit/recovery.rs:396,FP,request body sent to the server; serialising it is its job
+18,ente,e0102a2,CA012,high,rust/crates/legacy/src/kit/recovery.rs:356,FP,request body sent to the server; serialising it is its job
+19,ente,e0102a2,CA012,high,rust/crates/accounts/src/models.rs:274,FP,response type received from the server to show the user a TOTP secret
+20,ente,e0102a2,CA012,high,rust/crates/accounts/src/types.rs:65,TH,account secrets serialised for storage; type already has ZeroizeOnDrop
+21,vodozemac,70ad23e,CA012,high,src/olm/session/root_key.rs:37,TH,root key serialised for the session pickle; the pickle is encrypted
+22,meilisearch,541dd6e,CA013,high,external-crates/async-openai/src/types/fine_tuning.rs:204,FP,"token counts and a seed, not secrets"
+23,meilisearch,541dd6e,CA013,high,crates/meilisearch-types/src/task_view.rs:134,FP,task view record compared in tests; no attacker-controlled comparison
+24,meilisearch,541dd6e,CA013,high,crates/meilitool/src/upgrade/v1_9.rs:74,NP,API key in a schema copy used by the upgrade tool
+25,application-services,24417f0,CA013,high,components/push/src/internal/storage/record.rs:14,TH,derived == on a record holding a private key; not compared on attacker input
+26,meilisearch,541dd6e,CA013,high,crates/meilisearch-types/src/tasks/mod.rs:799,FP,task details record; no attacker-controlled comparison
+27,meilisearch,541dd6e,CA013,high,crates/meilisearch-types/src/tasks/mod.rs:116,FP,task record; no attacker-controlled comparison
+28,meilisearch,541dd6e,CA013,high,crates/index-scheduler/src/upgrade/v1_37.rs:26,FP,remote configuration record; no attacker-controlled comparison
+29,application-services,24417f0,CA013,high,components/logins/src/login.rs:355,FP,a timestamp
+30,meilisearch,541dd6e,CA013,high,crates/milli/src/vector/embedder/openai.rs:22,FP,embedder configuration compared when settings change
+31,lldap,99c510a,CA013,high,app/src/components/create_user.rs:70,FP,password and its confirmation in a browser form the user is typing
+32,application-services,24417f0,CA013,high,components/logins/src/login.rs:299,FP,"name of a form field, not a password"
+33,meilisearch,541dd6e,CA013,high,crates/meilitool/src/upgrade/v1_9.rs:88,NP,API key in a schema copy used by the upgrade tool
+34,ente,e0102a2,CA015,medium,rust/crates/paste/src/lib.rs:220,TH,access token held in a request struct and never wiped
+35,vodozemac,70ad23e,CA015,medium,src/types/ed25519.rs:52,TH,copies are wiped but the struct holding the secret key source has no Drop
+36,lldap,99c510a,CA015,medium,set-password/src/main.rs:11,NP,command-line options of a small tool; the process exits after use
+37,ente,e0102a2,CA015,medium,rust/apps/cli/src/api/models.rs:234,TH,TOTP secret held in a String and never wiped (Debug is already redacted)
+38,cargo,0892e1e,CA015,medium,credential/cargo-credential/src/lib.rs:60,FP,protocol version numbers
+39,ente,e0102a2,CA015,medium,rust/crates/space/src/client/posts.rs:494,TH,decrypted post key kept in a Vec<u8> and never wiped
+40,ente,e0102a2,CA015,medium,rust/apps/cli/src/cli/account.rs:70,NP,command-line arguments of the CLI
+41,application-services,24417f0,CA015,medium,components/support/rc_crypto/src/aead.rs:125,TH,AEAD key copied into a Vec<u8> that is never wiped
+42,meilisearch,541dd6e,CA015,medium,crates/milli/src/update/index_documents/extract/extract_word_docids.rs:48,FP,"key of a database record, not key material"
+43,meilisearch,541dd6e,CA015,medium,crates/xtask/src/common/command.rs:17,FP,"name of an environment variable, not the key"
+44,quiche,c06ccd6,CA015,medium,quiche/src/packet.rs:295,FP,QUIC address-validation token sent in the clear in the packet header
+45,application-services,24417f0,CA015,medium,components/search/src/configuration_types.rs:387,FP,"name of a search engine, not a secret"
+46,meilisearch,541dd6e,CA020,high,crates/meilisearch/build.rs:56,FP,checksum of a public download in a build script
+47,cargo,0892e1e,CA021,high,src/sources/git/known_hosts.rs:665,FP,hash of a host name from a known_hosts file; nothing secret is compared
+48,meilisearch,541dd6e,CA021,high,crates/xtask/src/common/assets.rs:162,FP,checksum of a public asset file
+49,application-services,24417f0,CA027,high,components/fxa-client/src/internal/http_client.rs:624,FP,"HKDF salt of the Firefox Accounts protocol, a public constant"
+50,application-services,24417f0,CA028,medium,components/logins/src/db.rs:730,FP,"encdec is the encryptor, not a nonce; it draws a fresh nonce per call"
+51,meilisearch,541dd6e,CA071,medium,crates/milli/src/update/index_documents/mod.rs:495,FP,"fixed seed for building a vector index, deliberately reproducible"
