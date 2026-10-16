@@ -16,7 +16,7 @@ pub use finding::{Confidence, Finding, Severity};
 pub use source::ParsedFile;
 
 pub struct ScanOptions {
-    /// Scan `tests/`, `benches/`, `examples/` and `#[cfg(test)]` code.
+    /// Scan `tests/`, `benches/`, `examples/`, `xtask/`, `build.rs` and `#[cfg(test)]` code.
     pub include_tests: bool,
     /// Config from `cryptaudit.toml`; `None` applies no config rules.
     pub config: Option<suppress::Config>,
@@ -108,7 +108,7 @@ pub fn check_file(file: &ParsedFile, rules: &[Box<dyn rules::Rule>]) -> Vec<Find
     findings
 }
 
-const TEST_DIRS: &[&str] = &["tests", "benches", "bench", "examples"];
+const TEST_DIRS: &[&str] = &["tests", "benches", "bench", "examples", "xtask"];
 
 /// Words that mark a directory or file as test, fuzz or benchmark support:
 /// `tests_and_kats/`, `test_utils/`, `interop_test_vectors.rs`, `benchmark.rs`.
@@ -155,11 +155,12 @@ fn discover(root: &Path, include_tests: bool) -> Vec<PathBuf> {
         .map(ignore::DirEntry::into_path)
         .filter(|p| p.extension().is_some_and(|ext| ext == "rs"))
         // `#[cfg(test)] mod tests;` lives in its own file, so the attribute is not in it.
+        // Build scripts run on the developer's machine, not on attacker input.
         .filter(|p| {
             include_tests
                 || !p
                     .file_name()
-                    .is_some_and(|n| is_test_support_name(&n.to_string_lossy()))
+                    .is_some_and(|n| n == "build.rs" || is_test_support_name(&n.to_string_lossy()))
         })
         .collect();
     files.sort();

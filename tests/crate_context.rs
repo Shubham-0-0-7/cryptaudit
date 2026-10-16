@@ -135,3 +135,10 @@ fn test_support_directories_and_files_are_skipped() {
     paths.sort();
     assert_eq!(paths, ["c.rs", "real.rs"]);
 }
+
+#[test]
+fn build_scripts_are_not_scanned() {
+    // A build script checks a download on the developer's machine; no attacker is
+    // guessing the checksum byte by byte.
+    assert!(confidences("build_script", &[("build.rs", COMPARE)]).is_empty());
+}

@@ -10,7 +10,7 @@ use syn::{Field, ItemImpl, ItemStruct, Type};
 use super::ca010::{DeriveHit, Items, derive_hits, fallback_owner, leaking_fields};
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
-use crate::secret::{Strength, classify_name, is_public_name};
+use crate::secret::{Strength, classify_type_name, is_place_name, is_public_name, words};
 use crate::source::ParsedFile;
 
 pub static COPY_META: RuleMeta = RuleMeta {
@@ -58,7 +58,8 @@ or `with` are not reported.
 Confidence: high when the type is itself named like a clear secret
 (`SessionKey`, `StaticSecret`); low when it is an ordinary record
 (`Config { api_key }`, `TokenRequest`, `Credentials`), because most such
-records exist to be serialised. Low findings are hidden unless `--min-confidence low` is given.
+records exist to be serialised. A type named `*Request`, `*Response`, `*Args`
+or `*Opts` is a record, whatever its other words say. Low findings are hidden unless `--min-confidence low` is given.
 
 False positives: a type that is meant to be written to an encrypted
 keystore or config file on purpose. Suppress those with a comment saying why.
@@ -85,6 +86,12 @@ compares the raw bytes with `==`:
 
 Fix: implement `subtle::ConstantTimeEq` and compare with `ct_eq`. A manual
 `PartialEq` that calls `ct_eq` or `ConstantTimeEq` is not reported.
+
+Confidence: high for a key held as bytes, for a password or secret string,
+and for a type named like a secret (`SessionKey`). Low for an `api_key` or
+`token` string in a settings, task or request record, which is compared when
+the settings change, not against a guess. Low findings are
+hidden unless `--min-confidence low` is given.
 
 False positives: an `==` that is never reached with attacker-influenced
 input, for example comparing a key to itself in a test helper.
@@ -169,7 +176,20 @@ impl Rule for DeriveRule {
                 // config, a stored session) exists to be serialised. Only a type
                 // that is itself named like a secret (`StaticSecret`, `Password`)
                 // is a clear leak.
-                if self.derive == "Serialize" && classify_name(&hit.ty) != Some(Strength::Strong) {
+                let named_secret = classify_type_name(&hit.ty) == Some(Strength::Strong);
+                if self.derive == "Serialize" && !named_secret {
+                    confidence = confidence.min(Confidence::Low);
+                }
+                // The same goes for `==`: a settings or task record with an
+                // `api_key: String` is compared when the settings change, not against
+                // an attacker's guess. A byte-array key, or a password or secret, which is
+                // compared against what a user types, is still reported.
+                let password = hit.leaks.iter().any(|(label, _)| {
+                    words(label).iter().any(|w| {
+                        matches!(w.as_str(), "password" | "passwd" | "passphrase" | "secret")
+                    })
+                });
+                if self.derive == "PartialEq" && !named_secret && !hit.bytes && !password {
                     confidence = confidence.min(Confidence::Low);
                 }
                 let message = (self.message)(&hit);
@@ -208,7 +228,7 @@ impl DeriveRule {
             return None;
         };
         let name = self_ty.path.segments.last()?.ident.to_string();
-        if is_public_name(&name) {
+        if is_public_name(&name) || is_place_name(&name) {
             return None;
         }
 
@@ -225,7 +245,7 @@ impl DeriveRule {
             return None;
         }
 
-        let by_type = classify_name(&name);
+        let by_type = classify_type_name(&name);
         let confidence = match structs.get(&name) {
             Some(def) => {
                 let owner = fallback_owner(by_type, &def.fields);

@@ -138,6 +138,13 @@ const NOT_NONCES: &[&str] = &[
     "rng",
     "ciphersuite",
     "event_type",
+    // The object that encrypts, passed to a helper: `.encrypt(self.encdec.as_ref(), id)`.
+    "encdec",
+    "encryptor",
+    "encrypter",
+    "decryptor",
+    "cipher",
+    "aead",
 ];
 
 fn is_empty_or_text_literal(expr: &Expr) -> bool {
@@ -391,6 +398,8 @@ impl Visitor<'_> {
         match self.nonce_ref(nonce_arg) {
             NonceRef::Other => {}
             NonceRef::Fixed => self.report_fixed(span, Origin::Fixed),
+            NonceRef::Var(name)
+                if NOT_NONCES.contains(&name.rsplit('.').next().unwrap_or(&name)) => {}
             NonceRef::Var(name) => {
                 let info = self.state.vars.get(&name).cloned().unwrap_or_else(|| {
                     let version = self.next_version;
