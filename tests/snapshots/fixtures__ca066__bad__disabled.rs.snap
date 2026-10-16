@@ -1,0 +1,8 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+2:27 CA066 [critical/high] `dangerous_insecure_decode` decodes a token without checking its signature, so anyone can forge one
+6:16 CA066 [critical/high] `insecure_disable_signature_validation()`: tokens are accepted without checking their signature, so anyone can forge one
+10:5 CA066 [critical/high] `validate_signature = false`: tokens are accepted without checking their signature, so anyone can forge one
+15:23 CA066 [critical/medium] `Validation::new(<token header>.alg)`: the algorithm is read from the token, which the sender writes

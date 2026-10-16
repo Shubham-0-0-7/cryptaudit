@@ -1,0 +1,6 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+3:5 CA025 [high/low] `AES_ecb_encrypt` encrypts equal blocks to equal ciphertext, so patterns in the message show through
+11:5 CA025 [high/low] `Ecb` encrypts equal blocks to equal ciphertext, so patterns in the message show through

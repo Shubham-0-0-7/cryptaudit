@@ -1,0 +1,6 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:26 CA062 [medium/high] Argon2 with 512 KiB of memory: too low to slow down an attacker who has stolen the password hashes
+9:34 CA062 [medium/medium] Argon2 with 4096 KiB of memory: too low to slow down an attacker who has stolen the password hashes

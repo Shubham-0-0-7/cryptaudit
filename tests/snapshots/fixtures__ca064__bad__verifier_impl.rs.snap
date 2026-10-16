@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+5:8 CA064 [critical/high] `verify_server_cert` returns success without looking at the certificate, so every server is accepted

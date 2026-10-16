@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:17 CA065 [critical/medium] `danger_accept_invalid_hostnames(true)` inside a condition: TLS hostname verification is switched off when that condition holds, so any server is accepted

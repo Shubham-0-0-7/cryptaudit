@@ -1,0 +1,7 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:19 CA024 [high/low] `Md5` is broken for anything that needs collision resistance (signatures, certificates, tamper checks); it is fine for a plain checksum
+8:22 CA024 [high/low] `Sha1` is broken for anything that needs collision resistance (signatures, certificates, tamper checks); it is fine for a plain checksum
+14:17 CA024 [high/low] `Md5` is broken for anything that needs collision resistance (signatures, certificates, tamper checks); it is fine for a plain checksum

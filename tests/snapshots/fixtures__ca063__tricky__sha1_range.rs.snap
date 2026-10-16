@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:24 CA063 [high/low] `password` is hashed with SHA1: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it

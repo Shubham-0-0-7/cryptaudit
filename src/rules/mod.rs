@@ -5,11 +5,14 @@ mod bytes;
 mod ca010;
 mod compare;
 mod derives;
+mod kdf;
 mod keys;
+mod legacy;
 mod logging;
 mod nonce;
 mod results;
 mod rng;
+mod tls;
 mod zeroize;
 
 pub struct RuleMeta {
@@ -44,6 +47,13 @@ pub fn all() -> Vec<Box<dyn Rule>> {
         Box::new(rng::TimeSeed),
         Box::new(zeroize::MissingZeroize),
         Box::new(zeroize::ManualZeroing),
+        Box::new(kdf::WeakCost),
+        Box::new(kdf::FastPasswordHash),
+        Box::new(legacy::WeakPrimitive),
+        Box::new(legacy::EcbMode),
+        Box::new(tls::CertValidation),
+        Box::new(tls::HostnameValidation),
+        Box::new(tls::JwtValidation),
     ]
 }
 
