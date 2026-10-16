@@ -598,6 +598,119 @@ confirmation in a browser form; a `Vec<u32>` of protocol versions in a type name
 record key buffer; a QUIC address-validation token; a field naming a private-browsing search engine; a
 hash of a host name in a `known_hosts` check; a public protocol salt; and a deliberately reproducible seed.
 
+## Blind evaluation, round 6 (new crates, released 0.5.0, after the round 5 fixes)
+
+The round 5 fix pass was written against the round 5 sample, so round 6 is the first
+measurement of it. It ran on twelve crates the tool had never seen (atuin, boringtun, chatmail-core,
+core-crypto, crates.io, lighthouse, pingora, rbw, rustls, shadowsocks-rust, surrealdb, zebra) with the
+released 0.5.0, built from the tag. 805 findings in all, 263 at medium or high confidence. The sample
+is 55 findings (seed 20261017; 12 each for CA010, CA013 and CA015, every finding for the other seven
+rules). The labeller is one AI agent, not a human. The full report, with the crate table and the
+labels, is in [blind/round6_report.md](blind/round6_report.md) and
+[blind/labels_round6.csv](blind/labels_round6.csv).
+
+| Rule | n | TP | TH | NP | FP | Strict precision |
+|---|---|---|---|---|---|---|
+| CA010 | 12 | 2 | 6 | 1 | 3 | 67% |
+| CA011 | 3 | 0 | 1 | 0 | 2 | 33% |
+| CA012 | 9 | 0 | 0 | 0 | 9 | 0% |
+| CA013 | 12 | 0 | 1 | 0 | 11 | 8% |
+| CA014 | 3 | 3 | 0 | 0 | 0 | 100% |
+| CA015 | 12 | 0 | 4 | 1 | 7 | 33% |
+| CA021, CA027, CA028, CA071 | 4 | 0 | 0 | 1 | 3 | 0% |
+| **All** | **55** | **5** | **12** | **3** | **35** | **30.9% (17/55)** |
+
+Round 5 was 31% strict and 12% TP-only; round 6 is 30.9% and 9.1%. **The round 5 fix pass shows no
+measurable gain on unseen crates.** The samples differ in size, crates and rule mix, so a few points
+either way is noise; the honest reading is "no improvement shown". Round 6 also shows what the earlier
+rounds hinted at: CA010 and CA014 are usable (67% and 3 of 3), and the three derive rules and CA015
+are not (CA012 0 of 9, CA013 1 of 12, CA015 4 of 12).
+
+The 35 false positives, by cause: a public or ordinary value with a secret-sounding name (11);
+derived `PartialEq` on a config, database-row or syntax-tree struct that is never compared on attacker
+input (8); a field that already holds ciphertext (6); a type whose purpose is to be serialised (4);
+an error-message `String` in a variant named after a secret (2); a custom redacting derive that was not
+recognised (1); an XML tag name matched as a MAC tag (1); a session id read as a nonce (1); the unused
+fallback seed of a deterministic test RNG (1).
+
+Five CA010 rows are real credentials in a derived `Debug` where no print of the struct was found. Round 6
+labelled them TH; round 5 labelled the same pattern TP. Under the round 5 convention TP-only would be
+18%. Strict precision does not depend on that choice, which is why it is the headline number.
+
+True positives (5): a password in a public SDK credentials struct, and in shadowsocks-rust a config
+struct with the password and keys that is printed with `trace!("{:?}")`, a SOCKS5 password logged on a
+failed login, a configured password logged on a decoding error, and an accepted password traced.
+
+**A missed bug seen while reading.** shadowsocks-rust compares the stored proxy password with the one the
+client sent using `==` (`check_user`, in two files). No rule fired. That is one anecdote, not a recall
+estimate, but it is the same class as the totp-rs miss in [recall.md](recall.md): a secret compared with
+`==` where nothing is named like a MAC.
+
+No fixes follow from round 6 yet. The report lists ten proposals (for example: CA013 should only fire
+on a type that is itself a key or token newtype, or on a real `==` of a secret; CA012 should skip data
+transfer types; the plain words `key`, `keys` and `credential` are too generic for CA011 and CA015).
+They would be written against this sample, so a seventh round on new crates is needed to measure them.
+
+## New rules after 0.5.0: CA024, CA025, CA062 to CA066
+
+Seven rules were added to the working tree after the 0.5.0 release: broken ciphers and hashes (CA024),
+ECB mode (CA025), weak password-hashing work factor (CA062), a fast hash applied to a password (CA063),
+TLS certificate validation off (CA064), TLS hostname verification off (CA065) and JWT signature
+checking off (CA066). Each has fixtures with a good, a bad and a tricky case (`tests/fixtures/ca0NN`).
+
+**This is a probe, not a blind round.** They were run on the 36 crates already cloned for rounds 4, 5
+and 6, and the rules were adjusted after reading what they found, so none of this is a precision
+figure. A blind round on new crates must come before any number is quoted. The readings below are one
+reader's (Claude), made after looking at the code.
+
+| Rule | Default-view findings on 36 crates | What they were |
+|---|---|---|
+| CA064 | 11 (8 high, 3 medium) | every one is real "accept any certificate" code, and none looks like a forgotten test switch. Deliberate and documented in 2 (Mullvad domain fronting, where an inner TLS layer carries the security), opt-in or configurable in 6 (a resolver option, an insecure mail client, an explicit `verify = false` in a proxy, an account setting), test or example code in 3 (a QUIC example, a QUIC benchmark, the BoGo TLS test shim) |
+| CA065 | 1 (medium) | the same chat client, as an opt-in |
+| CA063 | 6 (medium) | six `hasher.update(password)` calls in one remote-desktop client that hashes the connection password with SHA-256 for a challenge. Real, and by design in that protocol, so hardening at best |
+| CA024 | 5 (medium) | all five are inside aws-lc-rs, a cryptography library that implements DES and 3DES. False positives of the kind "a library implements the primitive". 24 low-confidence MD5 and SHA-1 uses, hidden by default, are checksums and protocol hashes |
+| CA025 | 0 at default view, 4 low | the low ones are a library's mode table and QUIC header protection, which uses single-block AES-ECB on purpose |
+| CA062, CA066 | 0 | nothing to report in these crates |
+
+Changes made while probing, each with a fixture: a type alias and the calls through it count as one
+finding; a verifier impl is not reported where a named accept-all verifier is already reported in the
+same file; OpenSSL `set_verify_hostname(false)` next to `add_host` is a hand check, not a switch-off;
+one PBKDF2 round is a derivation step (the Bitwarden login hash), not password hashing; names in
+`SCREAMING_CASE` and names containing `legacy` are skipped; `set_verify(NONE)` in only one branch of
+an `if` is medium, not high.
+
+**Known limits.** CA024 will flag a cryptography library's own implementation of a legacy cipher.
+CA062 only sees a literal or a same-file constant, so a work factor read from configuration is not
+checked. CA063 reads names: a password called `pw` or `secret` is missed. CA064 cannot tell a test
+helper outside a `tests/` directory from production code.
+
+## Second labeller on round 5
+
+A second, independent labeller labelled the same 52 round 5 findings without seeing the first labels
+(an AI agent, not a human; the file is [blind/labels_round5_second.csv](blind/labels_round5_second.csv)).
+Rahul has not labelled yet; a human second opinion is still open.
+
+| First \ second | TP | TH | NP | FP |
+|---|---|---|---|---|
+| TP | 0 | 6 | 0 | 0 |
+| TH | 0 | 6 | 1 | 3 |
+| NP | 0 | 0 | 3 | 2 |
+| FP | 0 | 1 | 0 | 30 |
+
+- **Exact agreement on the four labels: 39 of 52 (75%), Cohen's kappa 0.54.**
+- **Agreement on "counts toward strict precision" (TP or TH) against "does not" (NP or FP): 47 of 52
+  (90%), kappa 0.76.** Strict precision was 31% (16/52) by the first labeller and 25% (13/52) by the second.
+- **TP versus TH is not stable.** The second labeller gave no TP at all: it would only call a finding a
+  true positive if it saw a secret reach a sink, and for each of the first labeller's six TPs (secrets
+  in a derived `Debug`) it saw no print. TP-only was 12% against 0%. This is the same boundary that moved
+  between round 5 and round 6, so TP-only should not be quoted without saying so.
+- The five disagreements on strict precision: two root keys that are serialised only for an encrypted
+  pickle (TH against FP), a TOTP secret in a response type (FP against TH), a stored record with a derived
+  `==` that is never compared on input (TH against FP), and a TOTP secret in a command-line model (TH
+  against NP).
+
+The headline, strict precision, holds up under a second reader (31% against 25%); the TP-only figure does not.
+
 ## Caveat
 
 Precision here is measured on repositories that were chosen because they are

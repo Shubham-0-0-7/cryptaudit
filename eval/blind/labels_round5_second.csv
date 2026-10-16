@@ -1,0 +1,53 @@
+id,rule,confidence,location,label,reason
+0,CA010,high,components/sync15/src/client/storage_client.rs:121,TH,Real access token in derived Debug; no sink shown (Debug of init not logged)
+1,CA010,high,qlog/src/events/quic.rs:1152,FP,qlog schema type; quiche never populates the key field
+2,CA010,high,crates/xtask/src/common/command.rs:15,FP,"api_key_variable is the name of an env var, not a secret"
+3,CA010,high,crates/meilisearch-types/src/tasks/mod.rs:799,TH,Export::api_key is a real remote API key in derived Debug; no log sink shown (primary_key is not secret)
+4,CA010,high,external-crates/async-openai/src/types/fine_tuning.rs:204,FP,"seed and trained_tokens are public API fields, not secrets"
+5,CA010,medium,crates/sql-backend-handler/src/sql_tables.rs:64,FP,"Describes where a key is located (config location or path), not key material"
+6,CA010,high,crates/meilitool/src/upgrade/v1_9.rs:67,NP,Real api_key in derived Debug but in meilitool upgrade CLI code
+7,CA010,medium,rust/apps/cli/src/api/models.rs:101,FP,Manual Debug impl already redacts the token
+8,CA010,high,components/push/src/internal/storage/record.rs:14,TH,Serialized private EC key bytes and auth in derived Debug (bypasses KeyV1 redacted Debug); no sink shown
+9,CA010,high,external-crates/async-openai/src/types/chat.rs:727,FP,"seed is an OpenAI sampling parameter, not a secret"
+10,CA010,high,rust/crates/accounts/src/models.rs:365,TH,Recovery secret in derived Debug on request struct; no log sink shown
+11,CA010,high,rust/crates/space/src/models.rs:33,TH,Share-link access_key in derived Debug; no log sink shown
+12,CA011,high,tokio-quiche/src/settings/tls.rs:28,FP,"Fields are file paths, not key material"
+13,CA011,high,chacha20_poly1305/src/chacha20.rs:25,TH,Copy on a 32-byte cipher key in library; hardening only
+14,CA012,high,components/fxa-client/src/internal/commands/keys.rs:21,TH,Private push keys serialised to plaintext JSON for persistence; no leak shown
+15,CA012,medium,crates/sql-backend-handler/src/sql_tables.rs:64,FP,"Enum holds a key location or path, not key material"
+16,CA012,high,src/olm/session/root_key.rs:47,FP,pub(crate) type serialised only via pickle design; zeroized; intended persistence
+17,CA012,high,rust/crates/legacy/src/kit/recovery.rs:396,FP,session_token is sent to server in request body by protocol design
+18,CA012,high,rust/crates/legacy/src/kit/recovery.rs:356,FP,session_token is sent to server in request body by protocol design
+19,CA012,high,rust/crates/accounts/src/models.rs:274,TH,Real TOTP secret with unneeded Serialize; no serialisation use seen
+20,CA012,high,rust/crates/accounts/src/types.rs:65,TH,Long-lived keys with Serialize that is not used (fields stored individually); ZeroizeOnDrop and redacted Debug present
+21,CA012,high,src/olm/session/root_key.rs:37,FP,pub(crate) type serialised only via pickle design; zeroized; intended persistence
+22,CA013,high,external-crates/async-openai/src/types/fine_tuning.rs:204,FP,Non-secret fields (token count and seed); equality is not an attacker oracle
+23,CA013,high,crates/meilisearch-types/src/task_view.rs:134,FP,View struct; api_key is redacted and equality of config views is not an oracle
+24,CA013,high,crates/meilitool/src/upgrade/v1_9.rs:74,FP,Equality derive on upgrade config struct; no attacker-controlled comparison
+25,CA013,high,components/push/src/internal/storage/record.rs:14,FP,Equality derive on stored record; never compared against attacker input
+26,CA013,high,crates/meilisearch-types/src/tasks/mod.rs:799,FP,Equality derive on task details; no attacker-controlled comparison
+27,CA013,high,crates/meilisearch-types/src/tasks/mod.rs:116,FP,Equality derive on task kinds; no attacker-controlled comparison
+28,CA013,high,crates/index-scheduler/src/upgrade/v1_37.rs:26,FP,Equality derive on remote config; no attacker-controlled comparison
+29,CA013,high,components/logins/src/login.rs:355,FP,"time_password_changed is a timestamp, not a secret"
+30,CA013,high,crates/milli/src/vector/embedder/openai.rs:22,FP,Equality derive on embedder options; no attacker-controlled comparison
+31,CA013,high,app/src/components/create_user.rs:70,FP,Client-side WASM form model; password == confirm is not a timing oracle
+32,CA013,high,components/logins/src/login.rs:299,FP,"password_field is the HTML form field name, not the password"
+33,CA013,high,crates/meilitool/src/upgrade/v1_9.rs:88,FP,Equality derive on upgrade config struct; no attacker-controlled comparison
+34,CA015,medium,rust/crates/paste/src/lib.rs:220,TH,Access token in request struct not wiped; hardening only
+35,CA015,medium,src/types/ed25519.rs:52,TH,Long-lived ed25519 expanded secret copy (source) has no Drop or zeroize
+36,CA015,medium,set-password/src/main.rs:11,NP,CLI args struct in lldap set-password tool
+37,CA015,medium,rust/apps/cli/src/api/models.rs:234,NP,Secret in ente CLI app model (custom redacted Debug)
+38,CA015,medium,credential/cargo-credential/src/lib.rs:60,FP,"v is a list of protocol versions, not a secret"
+39,CA015,medium,rust/crates/space/src/client/posts.rs:494,TH,Decrypted post key in Vec not wiped; hardening only
+40,CA015,medium,rust/apps/cli/src/cli/account.rs:70,NP,CLI args struct in ente CLI app
+41,CA015,medium,components/support/rc_crypto/src/aead.rs:125,TH,AEAD key copied into Vec with no zeroize on drop in crypto library
+42,CA015,medium,crates/milli/src/update/index_documents/extract/extract_word_docids.rs:48,FP,"key_buffer holds database keys (word docids), not cryptographic keys"
+43,CA015,medium,crates/xtask/src/common/command.rs:17,FP,"api_key_variable is an env var name, not a secret"
+44,CA015,medium,quiche/src/packet.rs:295,FP,QUIC address-validation token in packet header is not secret key material
+45,CA015,medium,components/search/src/configuration_types.rs:387,FP,"global_default_private is a search engine id, not a secret"
+46,CA020,high,crates/meilisearch/build.rs:56,FP,Public sha1 of a downloaded asset in build.rs; no secret or timing oracle
+47,CA021,high,src/sources/git/known_hosts.rs:665,FP,Hashed hostname lookup in known_hosts; not secret and no attacker oracle
+48,CA021,high,crates/xtask/src/common/assets.rs:162,FP,Public sha256 of a workload asset in dev tool; no secret or timing oracle
+49,CA027,high,components/fxa-client/src/internal/http_client.rs:624,FP,All-zero HKDF salt is the FxA protocol default; secret is the session token input
+50,CA028,medium,components/logins/src/db.rs:730,FP,"self.encdec is the encryptor object, not a nonce; nonce is generated per encrypt call"
+51,CA071,medium,crates/milli/src/update/index_documents/mod.rs:495,FP,Fixed seed 42 for deterministic vector-store build; not security-relevant

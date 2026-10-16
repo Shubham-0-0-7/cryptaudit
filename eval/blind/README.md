@@ -33,3 +33,11 @@ rust-bitcoin, s2n-quic, sudo-rs, tmkms and vodozemac. The scan ran on the defaul
 branch heads on 2026-10-16; the `commit` column gives each SHA.
 The labels were written before the round 5 fix pass and are not edited by it; the
 fix pass is described in `../triage.md`, and a sixth round on new crates will measure it.
+
+`labels_round5_second.csv` is a second labeller's labels for the same 52 round 5
+findings, written without sight of `labels_round5.csv` (an AI agent, not a human).
+Columns `id,rule,confidence,location,label,reason`. Agreement is in `../triage.md`.
+
+`labels_round6.csv` is round 6: twelve more crates, scanned with the released 0.5.0, a
+seeded sample (seed 20261017) of 55 findings. Same columns as `labels_round2.csv`.
+The report is `round6_report.md`.

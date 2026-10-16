@@ -1,0 +1,56 @@
+id,repo,commit,rule,confidence,location,label,reason
+0,lighthouse,6db6ae9,CA010,medium,beacon_node/execution_layer/src/lib.rs:137,FP,"variant holds an error message string (map_err of file/hex errors), not the JWT secret"
+1,boringtun,6dcc889,CA010,high,boringtun/src/noise/handshake.rs:280,TH,"chaining_key/hash of transient Noise handshake state printed by derived Debug; no sink shown, hand-written Debug of sibling struct already redacts only the ephemeral key"
+2,rbw,77464d4,CA010,high,src/bin/rbw/commands.rs:1021,TH,output enum for the rbw CLI holds decrypted password and ssh private key with derived Debug; no format of it found
+3,core-crypto,b6806ae,CA010,high,keystore/src/entities/mls/stored_encryption_key_pair.rs:16,FP,"uses core_crypto_macros::Debug with #[sensitive], which obfuscates the field; not std derive Debug"
+4,surrealdb,18971ff,CA010,high,surrealdb/src/opt/auth.rs:52,TP,"public SDK credentials struct for database user holds password and derives Debug, so dbg!/{:?} prints it"
+5,chatmail-core,dce6438,CA010,high,src/smtp/queue.rs:10,TH,queued mail enum holds the group shared secret with derived Debug; no format of it found
+6,rustls,bb2165f,CA010,high,bogo/src/main.rs:1113,NP,"BoGo test shim key-log memo, test harness code"
+7,shadowsocks-rust,a1bb242,CA010,high,crates/shadowsocks-service/src/local/http/config.rs:21,TH,deserialisation DTO for http auth config with derived Debug; never formatted
+8,shadowsocks-rust,a1bb242,CA010,high,crates/shadowsocks-service/src/config.rs:534,TH,SIP008 config DTO with derived Debug; never formatted
+9,shadowsocks-rust,a1bb242,CA010,high,crates/shadowsocks/src/manager/protocol.rs:15,TH,manager protocol message struct with derived Debug; no format of it found
+10,shadowsocks-rust,a1bb242,CA010,high,crates/shadowsocks/src/config.rs:404,TP,"ServerConfig derives Debug with password, enc_key and identity keys, and it is printed by trace!(""{:?}"", config) in server/local/manager startup and DNS paths"
+11,lighthouse,6db6ae9,CA010,medium,validator_client/initialized_validators/src/lib.rs:81,FP,"variants hold the error string returned by read_password_from_user, not the password"
+12,zebra,6ef98aa,CA011,medium,zebra-consensus/src/primitives/cache.rs:129,FP,"sighash is a public transaction signature digest in a verification cache key, not a secret"
+13,zebra,6ef98aa,CA011,high,zebra-chain/src/orchard/note.rs:24,TH,"Orchard note rseed is secret randomness and the type is Copy, but the field is never read (dead_code) and a node does not hold spending secrets"
+14,zebra,6ef98aa,CA011,high,zebra-chain/src/sprout/keys.rs:16,FP,"Sprout paying key a_pk is part of the payment address, public; Debug is hand-written"
+15,rbw,77464d4,CA012,high,src/api.rs:742,FP,"field is the encrypted cipher string from the Bitwarden sync response, not plaintext; Serialize is incidental"
+16,rbw,77464d4,CA012,high,src/api.rs:317,FP,login request body: serialising the password hash to the identity endpoint is the purpose of the struct
+17,core-crypto,b6806ae,CA012,high,keystore/src/entities/mls/stored_epoch_encryption_keypair.rs:10,FP,keystore entity serialised for persistence in the encrypted keystore; sensitive fields marked and zeroized on drop
+18,rbw,77464d4,CA012,high,src/api.rs:658,FP,"field holds the encrypted cipher string from the vault, not plaintext private key"
+19,core-crypto,b6806ae,CA012,high,keystore/src/connection/idb_migration/legacy/entities/mls/encryption_keypair.rs:73,FP,struct is the Encrypt form: sk is already encrypted before serialisation
+20,core-crypto,b6806ae,CA012,high,keystore/src/connection/idb_migration/legacy/entities/mls/hpke_private_key.rs:74,FP,struct is the Encrypt form: sk is already encrypted before serialisation
+21,core-crypto,b6806ae,CA012,high,keystore/src/connection/idb_migration/legacy/entities/mls/stored_epoch_encryption_keypair.rs:329,FP,struct is the Encrypt form: keypairs is already encrypted before serialisation
+22,core-crypto,b6806ae,CA012,high,keystore/src/entities/mls/stored_hpke_private_key.rs:16,FP,keystore entity serialised for persistence in the encrypted keystore; zeroized on drop and Debug obfuscated
+23,core-crypto,b6806ae,CA012,high,keystore/src/entities/mls/stored_encryption_key_pair.rs:16,FP,keystore entity serialised for persistence in the encrypted keystore; zeroized on drop and Debug obfuscated
+24,core-crypto,b6806ae,CA013,high,keystore/src/migrations.rs:15,FP,MLS credential is public identity data in a migration struct; derived equality is not secret-dependent
+25,lighthouse,6db6ae9,CA013,high,common/account_utils/src/validator_definitions.rs:61,FP,config struct equality (dedup/compare of validator definitions); no attacker-controlled counterpart
+26,shadowsocks-rust,a1bb242,CA013,high,crates/shadowsocks-service/src/config.rs:85,FP,config struct equality for outbound proxy settings; not compared to attacker input
+27,core-crypto,b6806ae,CA013,high,keystore/src/entities/mls/old_epoch_data.rs:16,FP,keystore row struct equality; not compared to attacker input
+28,atuin,10b1141,CA013,high,crates/atuin-common/src/encryption/paseto_v4.rs:124,TH,32-byte paseto symmetric key type with derived non-constant-time PartialEq; no secret-dependent use found but a key type should compare in constant time
+29,zebra,6ef98aa,CA013,high,zebra-rpc/src/methods/types/transaction.rs:726,FP,ephemeral_key of a Sapling output is public on-chain data
+30,chatmail-core,dce6438,CA013,high,src/transport.rs:161,FP,login params config equality; not compared to attacker input
+31,rbw,77464d4,CA013,high,src/db.rs:116,FP,vault entry equality used for change detection; not attacker-controlled
+32,zebra,6ef98aa,CA013,high,zebra-chain/src/sprout/keys.rs:16,FP,Sprout paying key is public (part of the address)
+33,core-crypto,b6806ae,CA013,high,keystore/src/migrations.rs:26,FP,legacy migration row struct equality; not compared to attacker input
+34,chatmail-core,dce6438,CA013,high,src/login_param.rs:65,FP,login params config equality; not compared to attacker input
+35,surrealdb,18971ff,CA013,medium,surrealdb/core/src/sql/statements/define/user.rs:12,FP,"SQL AST node for DEFINE USER; equality of statements, not a password check"
+36,shadowsocks-rust,a1bb242,CA014,medium,crates/shadowsocks-service/src/local/socks/server/socks5/tcprelay.rs:157,TP,"error! logs the client-supplied SOCKS5 password on failed auth, and the error message repeats it"
+37,shadowsocks-rust,a1bb242,CA014,medium,crates/shadowsocks-service/src/manager/server.rs:555,TP,error! logs the configured user password when its base64 decoding fails
+38,shadowsocks-rust,a1bb242,CA014,medium,crates/shadowsocks-service/src/local/socks/server/socks5/tcprelay.rs:144,TP,trace! logs the accepted SOCKS5 user password
+39,rbw,77464d4,CA015,medium,src/bin/rbw/commands.rs:2683,TH,"TOTP secret held in a CLI-local struct, dropped without zeroize; no leak shown"
+40,lighthouse,6db6ae9,CA015,medium,consensus/types/src/withdrawal/withdrawal_credentials.rs:15,FP,"Ethereum withdrawal address bytes, public; not key material"
+41,rbw,77464d4,CA015,medium,src/api.rs:786,FP,"password history entries are copied from the db, which stores encrypted cipher strings"
+42,lighthouse,6db6ae9,CA015,medium,validator_manager/src/common.rs:158,NP,"validator-manager CLI create spec holding the mnemonic, tool code"
+43,surrealdb,18971ff,CA015,medium,surrealdb/core/src/kvs/rocksdb/scan_cursor.rs:131,FP,"RocksDB scan key buffer of database keys, not key material"
+44,core-crypto,b6806ae,CA015,medium,keystore/src/connection/idb_migration/legacy/entities/mls/credential.rs:99,TH,"legacy migration struct holding a signature private key without zeroize; long-lived key material, no leak shown"
+45,core-crypto,b6806ae,CA015,medium,keystore/src/entities/mls/old_epoch_member_data.rs:73,FP,source comment states both fields hold public non-sensitive data
+46,lighthouse,6db6ae9,CA015,medium,beacon_node/store/src/invariants.rs:779,FP,"db row key built from a validator index, not key material"
+47,lighthouse,6db6ae9,CA015,medium,common/eth2/src/lighthouse_vc/types.rs:128,TH,HTTP API request DTO carrying the web3signer client certificate password without zeroize; no leak shown
+48,lighthouse,6db6ae9,CA015,medium,slasher/src/database.rs:91,FP,"slasher DB key built from epoch and validator index, not secret"
+49,pingora,4487f7b,CA015,medium,pingora-core/src/utils/tls/s2n.rs:94,TH,TLS private key bytes in a long-lived cert holder without zeroize; no leak shown
+50,surrealdb,18971ff,CA015,medium,surrealdb/src/method/query.rs:623,FP,"vector of query result indices, not key material"
+51,chatmail-core,dce6438,CA021,medium,src/configure/auto_mozilla.rs:100,FP,"compares XML end-tag names while parsing autoconfig, not a MAC or digest"
+52,crates.io,26c169c,CA027,medium,crates/crates_io_encryption/src/lib.rs:24,NP,"key is in for_testing(), a test-only constructor (cfg test or debug_assertions); production reads TOKEN_ENCRYPTION_KEY from env"
+53,core-crypto,b6806ae,CA028,medium,interop/src/main.rs:456,FP,"session_id_with_master is a Proteus session id, not a nonce, in the interop test tool"
+54,surrealdb,18971ff,CA071,medium,surrealdb/core/src/rnd.rs:35,FP,"constant seed is the inactive fallback of a deterministic-test RNG, left unused unless SURREAL_RAND_SEED or reseed is set; real calls use the per-thread RNG"
