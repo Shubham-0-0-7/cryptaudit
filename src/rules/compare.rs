@@ -36,6 +36,12 @@ Confidence:
   medium  both sides are named like MACs (`derived_mac`, `stored_hmac`), or
           one side is named `mac`/`hmac`
   low     only a generic name such as `tag` or `digest` on one side
+A second shape is a one-time code: a value produced by `generate`, `compute`
+or `calculate` compared with a parameter named `token`, `code`, `otp` or
+`signature`. That is medium confidence, and it needs both halves.
+
+    if self.generate(step_time) == token { .. }   // totp-rs before 1.1.0
+
 Comparisons against a literal or an enum/const path (`tag == \"div\"`,
 `kind == Tag::Open`) are never reported, and neither are the bodies of
 functions named like `ct_eq` or `constant_time_*`.
@@ -309,7 +315,10 @@ fn compare_confidence(a: &Expr, b: &Expr, env: &Env) -> Option<Confidence> {
         return None;
     }
     let (ea, eb) = (evidence(a, env), evidence(b, env));
-    let best = ea.max(eb)?;
+    let Some(best) = ea.max(eb) else {
+        // No MAC evidence: a freshly computed code against a presented one.
+        return is_code_check(a, b).then_some(Confidence::Medium);
+    };
     let both = ea.is_some() && eb.is_some();
     Some(match best {
         Evidence::Api => Confidence::High,
@@ -318,6 +327,72 @@ fn compare_confidence(a: &Expr, b: &Expr, env: &Env) -> Option<Confidence> {
         Evidence::Weak if both => Confidence::Medium,
         Evidence::Weak => Confidence::Low,
     })
+}
+
+/// A code worked out locally compared with one the user sent.
+fn is_code_check(a: &Expr, b: &Expr) -> bool {
+    computed_code(a) && presented_code(b) || computed_code(b) && presented_code(a)
+}
+
+/// `self.generate(t)`, `compute_code(..)`: a code worked out locally, to be
+/// checked against what the user sent.
+fn computed_code(expr: &Expr) -> bool {
+    let name = match expr {
+        Expr::Reference(e) => return computed_code(&e.expr),
+        Expr::Paren(e) => return computed_code(&e.expr),
+        Expr::Try(e) => return computed_code(&e.expr),
+        Expr::MethodCall(c) => {
+            let m = c.method.to_string();
+            if PASS_THROUGH.contains(&m.as_str()) || matches!(m.as_str(), "to_string" | "as_str") {
+                return computed_code(&c.receiver);
+            }
+            m
+        }
+        Expr::Call(c) => match &*c.func {
+            Expr::Path(f) => match f.path.segments.last() {
+                Some(seg) => seg.ident.to_string(),
+                None => return false,
+            },
+            _ => return false,
+        },
+        _ => return false,
+    };
+    let ws = words(&name);
+    ws.iter()
+        .any(|w| matches!(w.as_str(), "generate" | "compute" | "calculate"))
+        && !ws.iter().any(|w| {
+            matches!(
+                w.as_str(),
+                "id" | "uuid" | "nonce" | "key" | "salt" | "random"
+            )
+        })
+}
+
+/// A parameter or field named like a code the user typed or sent.
+fn presented_code(expr: &Expr) -> bool {
+    let name = match expr {
+        Expr::Reference(e) => return presented_code(&e.expr),
+        Expr::Paren(e) => return presented_code(&e.expr),
+        Expr::MethodCall(c) if PASS_THROUGH.contains(&c.method.to_string().as_str()) => {
+            return presented_code(&c.receiver);
+        }
+        Expr::Path(p) => match p.path.get_ident() {
+            Some(i) => i.to_string(),
+            None => return false,
+        },
+        Expr::Field(f) => match &f.member {
+            syn::Member::Named(n) => n.to_string(),
+            syn::Member::Unnamed(_) => return false,
+        },
+        _ => return false,
+    };
+    !is_excluded(&name)
+        && words(&name).iter().any(|w| {
+            matches!(
+                w.as_str(),
+                "token" | "code" | "otp" | "totp" | "hotp" | "passcode" | "signature" | "sig"
+            )
+        })
 }
 
 /// A crate that implements `PartialEq` with `ct_eq` (orion, `subtle`-based newtypes)
@@ -391,9 +466,18 @@ impl<'ast> Visit<'ast> for EqVisitor<'_> {
                 } else {
                     "!="
                 };
-                let message = format!(
-                    "MAC or digest compared with `{op}`, which is not constant time: an attacker can recover the tag byte by byte"
-                );
+                let code = evidence(&e.left, &self.env).is_none()
+                    && evidence(&e.right, &self.env).is_none()
+                    && is_code_check(&e.left, &e.right);
+                let message = if code {
+                    format!(
+                        "one-time code or token compared with `{op}`, which is not constant time: an attacker can guess it digit by digit"
+                    )
+                } else {
+                    format!(
+                        "MAC or digest compared with `{op}`, which is not constant time: an attacker can recover the tag byte by byte"
+                    )
+                };
                 self.out.push(self.file.finding(
                     &EQ_META,
                     confidence,

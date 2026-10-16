@@ -46,3 +46,18 @@ mod tests {
         mac == other_mac
     }
 }
+
+// A generated id compared with another id is not a secret comparison.
+fn same_id(gen: &Generator, id: u64) -> bool {
+    gen.generate_id() == id
+}
+
+// `token` against a locally computed value that is not a code: no `generate`.
+fn lexer_token(token: &Token, next: &Token) -> bool {
+    token == next
+}
+
+// The constant-time version of the totp-rs fix.
+fn check_ct(totp: &Totp, token: &str, step_time: u64) -> bool {
+    constant_time_eq(totp.generate(step_time).as_bytes(), token.as_bytes())
+}

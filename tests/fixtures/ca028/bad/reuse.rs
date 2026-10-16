@@ -75,3 +75,15 @@ fn ring_style(key: &LessSafeKey, mut buf: Vec<u8>) {
     let nonce = Nonce::assume_unique_for_key([0u8; 12]);
     key.seal_in_place_append_tag(nonce, Aad::empty(), &mut buf).unwrap(); // expect: CA028 medium
 }
+
+// Shape of cocoon before 0.4.0 (RUSTSEC-2023-0068): the generator is cloned for
+// every call, so every call starts from the same state and makes the same nonce.
+fn cloned_rng(&self) {
+    let mut nonce = [0u8; 12];
+    let mut rng = self.rng.clone();
+    rng.fill_bytes(&mut nonce); // expect: CA028 medium
+}
+
+fn cloned_inline(&self, iv: &mut [u8; 16]) {
+    self.rng.clone().fill_bytes(iv); // expect: CA028 medium
+}
