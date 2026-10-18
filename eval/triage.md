@@ -783,6 +783,49 @@ number on the next sample. The rules that keep their value are CA014 (3 of 3, th
 hardening, CA010 and CA015. The rest of the default view is mostly noise on libraries and config structs. The
 eight fixes proposed in the report would again be written against this sample.
 
+## Structural fixes after round 7
+
+Round 6 and round 7 showed that fixing names one sample at a time does not carry over. These changes are
+about structure instead: what the code is, not what a variable is called. None of them is measured on unseen
+crates; the numbers below are on the round 7 crates that the changes were written from.
+
+- **A switch is not a mistake.** CA064 and CA065 are low (hidden by default) when the code is only reached
+  because a setting about verification says so: `if config.certs_verification`, `if vars.pg_tls_no_verify`,
+  `if let Some(true) = allow_invalid_certificates`, `if skip_hostname_check`. That is a library or an
+  application honouring a choice its own caller made (reqwest's `danger_accept_invalid_certs`, the MongoDB
+  driver's `tlsAllowInvalidCertificates`, rauthy's `pg_tls_no_verify`). A literal `true` with no such
+  condition is still high, and a condition about something else (`url.starts_with(..)`) is still medium. The
+  installation of a verifier named like `NoVerifier` used to be high whatever surrounded it; it now follows
+  the same grading. A verifier that is only defined in a file, not installed there, is low: the installing
+  call is where the choice is made.
+- **A library offering the primitive.** CA024 and CA025 are low inside a trait, struct, enum, module or
+  `impl` named for the primitive (`trait Tdes`, `impl MechanismImpl for Tdes`, `mod rc4`), in a file named
+  for it (`tdes.rs`), and in every file of a crate (nearest `Cargo.toml`) that declares such a type or an enum
+  variant (`AlgorithmId::Tdes`, `DesForLegacyUseOnly`). A workspace's application crate is not excused by
+  the library next to it. CA063 is low inside a public function named after a hash (`pub fn md5_hash(user,
+  password, salt)`), which is how a protocol crate offers the scheme the protocol mandates.
+- **Hardening is listed apart.** CA010, CA011, CA012, CA013, CA015 and CA016 describe a weakness that matters
+  only if something else goes wrong (a derive that would print the key, a buffer that is not wiped). They
+  are now printed under their own heading after the findings, counted separately in the summary, carry
+  `"class": "hardening"` in JSON and SARIF, and do not make the exit status 1 unless `--fail-on-hardening`
+  is given. This is a change in behaviour for anyone who gated CI on the old default.
+- **`testbench` directories** are skipped like `tests`.
+
+**What it does on the round 7 crates.** Scanning the eight crates that held round 7's false positives with
+the old and new build: 18 findings drop to low (CA064 7, CA024 9, CA063 2), none rises and none appears. Of
+the 13 that were in the round 7 sample, all 13 had been labelled false positives (7 CA064, 4 CA024, 2
+CA063); the other 5 are aws-lc-rs, a library implementing DES that I read but nobody else labelled. The
+Rocket test client was labelled NP and is covered by the new `testbench` rule, which was tested on a fixture
+and not on Rocket itself. So all 14 default-view findings that the new rules produced in round 7 would no
+longer show. That is by construction: the changes were written after reading those findings, so it says
+nothing about how the rules behave on a crate not yet seen.
+
+**What it costs.** An application that really does ship an `--insecure` flag, wired to
+`danger_accept_invalid_certs(insecure)`, used to be medium and is now low, because the code cannot be told
+apart from a library offering the same flag. A crate that declares an `Md5` type is excused from CA024
+everywhere, including an unrelated misuse in the same crate. Both are false negatives by design, to be
+checked in the next blind round.
+
 ## Second labeller on round 5
 
 A second, independent labeller labelled the same 52 round 5 findings without seeing the first labels
