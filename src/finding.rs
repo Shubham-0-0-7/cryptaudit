@@ -22,6 +22,42 @@ pub enum Confidence {
     High,
 }
 
+/// What kind of report a finding is.
+///
+/// A `Finding` points at code that is wrong on its own: a certificate check
+/// switched off, a MAC compared with `==`, a key printed to a log. `Hardening`
+/// points at a weakness that only matters if something else goes wrong first: a
+/// key type that derives `Debug`, a secret that is not zeroed on drop. Those are
+/// worth fixing, but nothing here shows the leak happening, so they are listed
+/// apart and do not fail the exit code unless `--fail-on-hardening` is given.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Class {
+    Finding,
+    Hardening,
+}
+
+impl Class {
+    /// CA010 (Debug), CA011 (Copy), CA012 (Serialize), CA013 (PartialEq), CA015
+    /// (not zeroized) and CA016 (manual zeroing) are about how a secret is
+    /// handled in memory or in a type's derives.
+    pub fn of(rule: &str) -> Self {
+        match rule {
+            "CA010" | "CA011" | "CA012" | "CA013" | "CA015" | "CA016" => Class::Hardening,
+            _ => Class::Finding,
+        }
+    }
+}
+
+impl fmt::Display for Class {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Class::Finding => "finding",
+            Class::Hardening => "hardening",
+        })
+    }
+}
+
 impl fmt::Display for Severity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -46,6 +82,7 @@ impl fmt::Display for Confidence {
 #[derive(Clone, Debug, Serialize)]
 pub struct Finding {
     pub rule: &'static str,
+    pub class: Class,
     pub severity: Severity,
     pub confidence: Confidence,
     pub path: PathBuf,

@@ -9,7 +9,10 @@ use std::collections::HashSet;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
 use syn::visit::{self, Visit};
-use syn::{ExprPath, ImplItemFn, ItemFn, ItemType, TypePath};
+use syn::{
+    ExprPath, ImplItemFn, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, ItemTrait, ItemType,
+    Type, TypePath,
+};
 
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
@@ -53,6 +56,15 @@ Confidence:
 
 Fix: AES-GCM or ChaCha20-Poly1305 for encryption; SHA-256 or BLAKE3 for hashing;
 Argon2 for passwords (see CA063).
+
+Also low: code that *is* the primitive. A file called `tdes.rs`, a `trait Tdes`,
+`struct Md5`, `impl Cipher for Des`, or any file of a crate that declares such a
+type or an enum variant like `AlgorithmId::Tdes`: a crypto library offering the
+algorithm so that callers who need it for compatibility (smart cards that speak
+3DES, old file formats) can have it. The mistake would be in the program that
+chooses it, and that program is reported. This is decided by the names declared
+in the crate, so a library that wraps the algorithm under another name is still
+reported.
 
 Known false positives: a legacy file format or protocol that mandates the
 algorithm (the primitive is then required, and should be contained), and
@@ -122,6 +134,7 @@ fn scan(file: &ParsedFile, rule: &'static str) -> Vec<Finding> {
     let mut v = Visitor {
         file,
         rule,
+        implementing: usize::from(file.offers_primitive || file_is_primitive(file)),
         item: None,
         seen: HashSet::new(),
         out: Vec::new(),
@@ -138,6 +151,123 @@ fn scan(file: &ParsedFile, rule: &'static str) -> Vec<Finding> {
         }
     }
     best.into_iter().map(|(_, f)| f).collect()
+}
+
+/// Whether an item or module name is the primitive itself: `Tdes`, `md5`, `Rc4`.
+fn names_primitive(ident: &str) -> bool {
+    let mut chars = ident.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    let capitalised: String = first.to_uppercase().chain(chars).collect();
+    // A name that merely contains `ecb` (`EcbDemo`) is not the mode itself.
+    classify(&[capitalised])
+        .is_some_and(|h| h.meta.id == WEAK_META.id || ident.eq_ignore_ascii_case("ecb"))
+}
+
+/// Whether `source` declares a struct, enum, trait, module or enum variant named
+/// after a broken primitive: the file belongs to a crate that offers it. Reads
+/// tokens only, so it is cheap enough to run on every file of a crate.
+pub fn declares_primitive(source: &str) -> bool {
+    let Ok(tokens) = source.parse::<proc_macro2::TokenStream>() else {
+        return false;
+    };
+    declares_in(tokens)
+}
+
+fn declared_name_is_primitive(ident: &str) -> bool {
+    // `DesForLegacyUseOnly` is a library naming the algorithm it keeps for old callers.
+    let trimmed = ident
+        .strip_suffix("ForLegacyUseOnly")
+        .or_else(|| ident.strip_suffix("Legacy"))
+        .unwrap_or(ident);
+    names_primitive(trimmed)
+}
+
+fn declares_in(tokens: proc_macro2::TokenStream) -> bool {
+    use proc_macro2::TokenTree;
+    let mut keyword = false;
+    let mut enum_next = false;
+    for tt in tokens {
+        match tt {
+            TokenTree::Ident(i) => {
+                let name = i.to_string();
+                if keyword {
+                    keyword = false;
+                    if declared_name_is_primitive(&name) {
+                        return true;
+                    }
+                } else if matches!(name.as_str(), "struct" | "trait" | "mod" | "union") {
+                    keyword = true;
+                    enum_next = false;
+                } else if name == "enum" {
+                    keyword = true;
+                    enum_next = true;
+                }
+            }
+            TokenTree::Group(g) => {
+                if enum_next && g.delimiter() == proc_macro2::Delimiter::Brace {
+                    enum_next = false;
+                    if enum_variants(g.stream())
+                        .iter()
+                        .any(|v| declared_name_is_primitive(v))
+                    {
+                        return true;
+                    }
+                } else if declares_in(g.stream()) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+/// The first identifier of each comma-separated item of an enum body, skipping
+/// attributes.
+fn enum_variants(body: proc_macro2::TokenStream) -> Vec<String> {
+    use proc_macro2::TokenTree;
+    let mut out = Vec::new();
+    let mut at_start = true;
+    let mut depth_skip = false;
+    for tt in body {
+        match &tt {
+            TokenTree::Punct(p) if p.as_char() == ',' => at_start = true,
+            TokenTree::Punct(p) if p.as_char() == '#' => depth_skip = true,
+            TokenTree::Group(_) if depth_skip => depth_skip = false,
+            TokenTree::Ident(i) if at_start => {
+                out.push(i.to_string());
+                at_start = false;
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// A file named for the primitive it implements: `tdes.rs`, `md5/mod.rs`.
+fn file_is_primitive(file: &ParsedFile) -> bool {
+    let path = &file.path;
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+    let name = if stem == "mod" {
+        path.parent()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+    } else {
+        stem
+    };
+    names_primitive(name)
+}
+
+/// The last segment of a type path: `Tdes` in `super::Tdes`.
+fn type_name(ty: &Type) -> Option<String> {
+    match ty {
+        Type::Path(p) => p.path.segments.last().map(|s| s.ident.to_string()),
+        Type::Reference(r) => type_name(&r.elem),
+        _ => None,
+    }
 }
 
 /// What a path names, and how sure we are that it is a problem.
@@ -229,6 +359,8 @@ fn classify(segs: &[String]) -> Option<Hit> {
 struct Visitor<'a> {
     file: &'a ParsedFile,
     rule: &'static str,
+    /// Depth of enclosing items that are the primitive itself.
+    implementing: usize,
     /// Line of the function, alias or other item being visited.
     item: Option<usize>,
     /// `(item line, hit name)` already reported.
@@ -256,10 +388,21 @@ impl Visitor<'_> {
                 format!("`{}` {}", hit.name, hit.why),
             )
         };
-        let finding = self
-            .file
-            .finding(hit.meta, hit.confidence, span, message, help);
+        let confidence = if self.implementing > 0 {
+            hit.confidence.min(Confidence::Low)
+        } else {
+            hit.confidence
+        };
+        let finding = self.file.finding(hit.meta, confidence, span, message, help);
         self.out.push((self.item, finding));
+    }
+
+    /// Walks an item that may be the primitive's own definition.
+    fn defining<T>(&mut self, is_primitive: bool, walk: impl FnOnce(&mut Self) -> T) -> T {
+        self.implementing += usize::from(is_primitive);
+        let out = walk(self);
+        self.implementing -= usize::from(is_primitive);
+        out
     }
 
     fn within<T>(&mut self, line: usize, walk: impl FnOnce(&mut Self) -> T) -> T {
@@ -277,6 +420,35 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
 
     fn visit_impl_item_fn(&mut self, f: &'ast ImplItemFn) {
         self.within(f.span().start().line, |v| visit::visit_impl_item_fn(v, f));
+    }
+
+    fn visit_item_trait(&mut self, t: &'ast ItemTrait) {
+        let own = names_primitive(&t.ident.to_string());
+        self.defining(own, |v| visit::visit_item_trait(v, t));
+    }
+
+    fn visit_item_struct(&mut self, t: &'ast ItemStruct) {
+        let own = names_primitive(&t.ident.to_string());
+        self.defining(own, |v| visit::visit_item_struct(v, t));
+    }
+
+    fn visit_item_enum(&mut self, t: &'ast ItemEnum) {
+        let own = names_primitive(&t.ident.to_string());
+        self.defining(own, |v| visit::visit_item_enum(v, t));
+    }
+
+    fn visit_item_mod(&mut self, t: &'ast ItemMod) {
+        let own = names_primitive(&t.ident.to_string());
+        self.defining(own, |v| visit::visit_item_mod(v, t));
+    }
+
+    fn visit_item_impl(&mut self, t: &'ast ItemImpl) {
+        let own = type_name(&t.self_ty).is_some_and(|n| names_primitive(&n))
+            || t.trait_
+                .as_ref()
+                .and_then(|(_, p, _)| p.segments.last())
+                .is_some_and(|s| names_primitive(&s.ident.to_string()));
+        self.defining(own, |v| visit::visit_item_impl(v, t));
     }
 
     fn visit_item_type(&mut self, t: &'ast ItemType) {

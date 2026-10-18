@@ -106,7 +106,12 @@ fn test_support_directories_and_files_are_skipped() {
         .join("ctx")
         .join("testwords");
     let _ = std::fs::remove_dir_all(&dir);
-    for sub in ["src/tests_and_kats", "src/test_utils", "src/latest"] {
+    for sub in [
+        "src/tests_and_kats",
+        "src/test_utils",
+        "src/latest",
+        "testbench/src",
+    ] {
         std::fs::create_dir_all(dir.join(sub)).unwrap();
     }
     for file in [
@@ -115,6 +120,7 @@ fn test_support_directories_and_files_are_skipped() {
         "src/benchmark.rs",
         "src/interop_test_vectors.rs",
         "src/latest/c.rs",
+        "testbench/src/d.rs",
         "src/real.rs",
     ] {
         std::fs::write(dir.join(file), RAW).unwrap();
@@ -141,4 +147,78 @@ fn build_scripts_are_not_scanned() {
     // A build script checks a download on the developer's machine; no attacker is
     // guessing the checksum byte by byte.
     assert!(confidences("build_script", &[("build.rs", COMPARE)]).is_empty());
+}
+
+/// Writes `files` (path, contents) under a fresh directory and returns the CA024
+/// confidences by file name.
+fn weak_primitive(name: &str, files: &[(&str, &str)]) -> Vec<(String, String)> {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("ctx")
+        .join(name);
+    let _ = std::fs::remove_dir_all(&dir);
+    for (n, s) in files {
+        let path = dir.join(n);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, s).unwrap();
+    }
+    let report = scan(
+        &dir,
+        &ScanOptions {
+            include_tests: false,
+            config: None,
+            suppress: false,
+        },
+    );
+    let mut out: Vec<_> = report
+        .findings
+        .iter()
+        .filter(|f| f.rule == "CA024")
+        .map(|f| {
+            (
+                f.path.file_name().unwrap().to_string_lossy().into_owned(),
+                f.confidence.to_string(),
+            )
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+const CHOOSES_RC4: &str = "fn handshake(key: &[u8]) { let c = Rc4::new(key); }\n";
+const OFFERS_TDES: &str = "pub enum AlgorithmId { Aes128, Tdes }\n";
+
+#[test]
+fn a_program_that_picks_a_broken_cipher_is_reported() {
+    let got = weak_primitive(
+        "weak_app",
+        &[("Cargo.toml", ""), ("src/lib.rs", CHOOSES_RC4)],
+    );
+    assert_eq!(got, [("lib.rs".to_string(), "medium".to_string())]);
+}
+
+#[test]
+fn a_crate_declaring_the_primitive_is_low_in_every_file() {
+    let got = weak_primitive(
+        "weak_lib",
+        &[
+            ("Cargo.toml", ""),
+            ("src/ids.rs", OFFERS_TDES),
+            ("src/mac.rs", CHOOSES_RC4),
+        ],
+    );
+    assert_eq!(got, [("mac.rs".to_string(), "low".to_string())]);
+}
+
+#[test]
+fn the_library_does_not_excuse_the_application_next_to_it() {
+    let got = weak_primitive(
+        "weak_workspace",
+        &[
+            ("lib/Cargo.toml", ""),
+            ("lib/src/ids.rs", OFFERS_TDES),
+            ("app/Cargo.toml", ""),
+            ("app/src/main.rs", CHOOSES_RC4),
+        ],
+    );
+    assert_eq!(got, [("main.rs".to_string(), "medium".to_string())]);
 }
