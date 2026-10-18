@@ -45,3 +45,8 @@ The report is `round6_report.md`.
 `labels_round7.csv` is round 7: twelve more crates, scanned with a frozen copy of the
 working tree after the round 6 fix pass (25 rules), a seeded sample (seed 20261018) of 49
 findings. Same columns as `labels_round2.csv`. The report is `round7_report.md`.
+
+`labels_round8.csv` is round 8: twelve more crates, scanned with a frozen build of the committed tree
+after the structural fixes (25 rules), a seeded sample (seed 20261019, at most 12 rows per rule and 4 per
+crate) of 57 findings. Columns as `labels_round2.csv` plus `class` (`finding` or `hardening`). The report is
+`round8_report.md`.

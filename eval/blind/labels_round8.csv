@@ -1,0 +1,58 @@
+id,repo,commit,rule,confidence,class,location,label,reason
+0,fedimint,8c9d15c,CA010,high,hardening,fedimint-cursed-redb/src/lib.rs:21,FP,"`key` is a key-value database key (Vec<u8> in a redb wrapper), not cryptographic key material"
+1,fedimint,8c9d15c,CA010,high,hardening,fedimint-ui-common/src/lib.rs:108,TH,derive(Debug) on login-form DTO holding the admin password; handler passes it to auth.verify and no print of the struct found
+2,fedimint,8c9d15c,CA010,high,hardening,gateway/fedimint-gateway-server-db/src/lib.rs:530,TH,"derive(Debug) on legacy V0 gateway config with plaintext password, used only for the v1 migration; no log of it found"
+3,fedimint,8c9d15c,CA010,high,hardening,modules/fedimint-ln-common/src/contracts/mod.rs:130,FP,"PreimageKey is a 33-byte secp256k1 public key (tests build it from generate_keypair().1), not a secret"
+4,iroh,c6fba1b,CA010,medium,hardening,iroh-relay/src/main.rs:161,TP,"iroh-relay logs `debug!(""{relay_config:#?}"")`; RelayConfig.access is Arc<dyn DynAccessControl: Debug> and SharedTokenAccess(Vec<String>) derives Debug, so the configured bearer tokens are printed at debug level (flagged derive is on the sibling config enum)"
+5,sozu,43844cc,CA010,medium,hardening,command/src/config.rs:3934,FP,"hand-written Debug already redacts: key printed as ""[redacted]"" plus a length"
+6,sozu,43844cc,CA010,high,hardening,lib/src/load_balancing.rs:1313,FP,"`seed` is the Maglev load-balancing hash seed, not key material"
+7,sozu,43844cc,CA010,high,hardening,lib/src/router/mod.rs:2057,FP,"`key` is an HTTP header name in a header-rewrite edit, not a secret"
+8,warpgate,5d4d8da,CA010,high,hardening,vendor/picky/src/putty/ppk/mod.rs:33,TH,derive(Debug) on PuTTY key struct (vendored picky) holding private_key bytes; no print found
+9,warpgate,5d4d8da,CA010,high,hardening,vendor/picky/src/x509/certificate.rs:630,FP,"fields are X.509 key identifiers, key-usage flags and EKU lists (public certificate data), not secrets"
+10,warpgate,5d4d8da,CA010,high,hardening,warpgate-db-entities/src/Parameters.rs:205,TH,derive(Debug) on DB entity holding ca_private_key_pem; most listed fields are bools/fingerprints; no log of the model found
+11,warpgate,5d4d8da,CA010,high,hardening,warpgate-db-migrations/src/m00009_credential_models.rs:16,TH,derive(Debug) on a migration entity holding the TOTP secret_key; no print found
+12,alloy,eb2289c,CA011,high,hardening,crates/rpc-types-engine/src/jwt.rs:192,TH,derive(Copy) on 32-byte JWT secret: copies are silent and Drop is impossible; no leak shown
+13,alloy,eb2289c,CA013,high,hardening,crates/rpc-types-engine/src/jwt.rs:192,TH,"derived == on 32-byte JWT secret (non constant time); only compared in tests (assert_eq on file round trip), no attacker-input comparison found"
+14,alloy,eb2289c,CA013,high,hardening,crates/rpc-types-mev/src/eth_calls.rs:335,FP,"`tx` is a raw signed transaction in an RPC request type, which is public once broadcast, not a secret"
+15,alloy,eb2289c,CA013,high,hardening,crates/signer-local/src/mnemonic.rs:25,TH,derived PartialEq on MnemonicBuilder (mnemonic password field); builder is never compared on untrusted input
+16,fedimint,8c9d15c,CA013,high,hardening,modules/fedimint-empty-server/src/db.rs:20,FP,"tuple field is a database key prefix in the empty example module, not a secret"
+17,fedimint,8c9d15c,CA013,high,hardening,modules/fedimint-ln-common/src/contracts/mod.rs:130,FP,"PreimageKey is a public key, derived == is harmless"
+18,warpgate,5d4d8da,CA013,high,hardening,vendor/picky/src/ssh/private_key.rs:145,TH,derived PartialEq on vendored SSH private key struct with passphrase; no comparison on untrusted input found
+19,warpgate,5d4d8da,CA013,medium,hardening,warpgate-common/src/secrets.rs:226,FP,"flagged `Malformed(String)` holds an unparseable secret-reference string (a pointer, not the secret)"
+20,warpgate,5d4d8da,CA013,high,hardening,warpgate-db-migrations/src/m00009_credential_models.rs:219,TH,derived PartialEq on migration struct holding the TOTP key; never compared against attacker input
+21,warpgate,5d4d8da,CA014,medium,finding,vendor/sspi/src/kerberos/client/generators.rs:784,TP,"vendored sspi: #[instrument(level=""trace"", ret)] on generate_krb_priv_request records every argument including new_password; trace level only"
+22,warpgate,5d4d8da,CA014,medium,finding,vendor/sspi/src/kerberos/client/generators.rs:818,TP,vendored sspi: trace! of the Kerberos KRB_PRIV subkey (encryption_key) in the same function; trace level only
+23,warpgate,5d4d8da,CA014,medium,finding,vendor/sspi/src/kerberos/client/generators.rs:820,TP,"vendored sspi: trace! of encoded_krb_priv, the plaintext EncKrbPrivPart whose user_data is new_password; trace level only"
+24,warpgate,5d4d8da,CA014,medium,finding,vendor/sspi/src/kerberos/client/mod.rs:493,TP,vendored sspi: trace! of the DCE AP_REP sub-session key; trace level only
+25,fedimint,8c9d15c,CA015,medium,hardening,fedimint-api-client/src/api/mod.rs:647,TH,"FederationApi (Clone, Debug) holds the federation api_secret in a long-lived client struct, not wiped"
+26,fedimint,8c9d15c,CA015,medium,hardening,fedimint-ui-common/src/lib.rs:109,TH,transient login-form DTO with admin password; zeroizing a serde Form struct is marginal
+27,lemmy,fc640cf,CA015,medium,hardening,crates/api/api_crud/src/user/create.rs:75,TH,OAuth token response (access and refresh token) parsed once at signup; not wiped
+28,lemmy,fc640cf,CA015,medium,hardening,crates/db_schema/src/source/oauth_provider.rs:88,TH,insert form holding the OAuth client_secret; not wiped
+29,lemmy,fc640cf,CA015,medium,hardening,crates/db_views/site/src/api.rs:190,TH,"admin edit request with client_secret (token_endpoint is a URL, not secret); not wiped"
+30,lemmy,fc640cf,CA015,medium,hardening,crates/utils/src/settings/structs.rs:70,TH,"config struct holding the pictrs API key, not wiped"
+31,realworld-axum-sqlx,f1b2565,CA015,medium,hardening,src/http/users.rs:28,TH,"signup request DTO with password; example app, handler hashes it with argon2; not wiped"
+32,realworld-axum-sqlx,f1b2565,CA015,medium,hardening,src/http/users.rs:35,TH,login request DTO with password; not wiped
+33,warpgate,5d4d8da,CA015,medium,hardening,vendor/ironrdp-connector/src/license_exchange.rs:142,TH,vendored ironrdp: 48-byte random premaster secret local array dropped without zeroize; no leak shown
+34,warpgate,5d4d8da,CA015,medium,hardening,vendor/sspi/src/ntlm/mod.rs:72,TH,"vendored sspi Ntlm struct holds the session key, no zeroize on drop"
+35,warpgate,5d4d8da,CA015,medium,hardening,warpgate-db-entities/src/Parameters.rs:207,TH,DB entity holds ca_private_key_pem (other flagged names are fingerprints/policy); not wiped
+36,warpgate,5d4d8da,CA015,medium,hardening,warpgate-db-migrations/src/m00020_ldap_server.rs:10,TH,migration entity holding LDAP bind_password; not wiped
+37,nostr,de3031a,CA021,medium,finding,nostr/src/event/mod.rs:93,FP,"Event::eq compares the event tag list (nostr tags), not a MAC"
+38,nostr,de3031a,CA021,high,finding,nostr/src/nips/nip44/v2.rs:288,TP,NIP-44 decrypt checks the HMAC with `mac != calculated_mac.as_slice()` (early exit) on attacker-supplied payloads; the spec asks for constant time and a signer that decrypts remote input is a timing oracle
+39,sozu,43844cc,CA021,medium,finding,command/src/state.rs:599,FP,"compares replica/frontend `tags` maps (public routing tags), not a MAC"
+40,sozu,43844cc,CA021,medium,finding,command/src/state.rs:2760,FP,"same: frontend tags compared for removal, not a MAC"
+41,sozu,43844cc,CA021,medium,finding,lib/src/tls.rs:619,FP,compares certificate material_digest and expiration for deduplication; public values
+42,warpgate,5d4d8da,CA021,medium,finding,vendor/picky/src/pkcs12/mac.rs:130,TH,"vendored picky PKCS#12 MAC check with ==; file MAC verified offline from caller-supplied data, no practical oracle shown"
+43,warpgate,5d4d8da,CA021,high,finding,vendor/picky/src/putty/ppk/encoding.rs:61,FP,"unencrypted PPK file: MAC key is derivable by anyone, so a timing leak gives nothing"
+44,warpgate,5d4d8da,CA021,high,finding,vendor/picky/src/x509/pkcs7/authenticode.rs:676,FP,"Authenticode message digest vs hash of the content, both public"
+45,warpgate,5d4d8da,CA021,high,finding,vendor/picky/src/x509/pkcs7/authenticode.rs:871,FP,"compares the MD5 name hash of a CA subject against a trust-list entry, public data"
+46,yubikey.rs,bc96158,CA021,medium,finding,src/metadata.rs:117,FP,"`tag` is the TLV tag byte in a metadata parser, not a MAC"
+47,nostr,de3031a,CA029,medium,finding,signer/nostr-connect/src/client.rs:455,TH,"NIP-46 client compares the returned connect secret with `==`; real non constant-time compare of a secret, but the observer needs to time responses relayed over nostr relays"
+48,warpgate,5d4d8da,CA062,high,finding,warpgate-common/src/helpers/hash.rs:23,NP,Argon2 with 1000 KiB only when env var WARPGATE_UNDER_TEST is set (test hook in production file); default path is Argon2::default()
+49,sozu,43844cc,CA063,medium,finding,lib/src/protocol/mux/auth.rs:151,TP,sozu stores Basic-auth credentials as unsalted `username:hex(sha256(password))` in config (documented format); the config hashes are crackable at SHA-256 speed
+50,warpgate,5d4d8da,CA063,medium,finding,warpgate-protocol-mysql/src/common.rs:26,FP,MySQL caching_sha2_password client scramble the protocol mandates; not a stored password hash
+51,warpgate,5d4d8da,CA063,medium,finding,warpgate-protocol-mysql/src/common.rs:27,FP,same MySQL caching_sha2_password scramble (second SHA-256 round)
+52,warpgate,5d4d8da,CA063,medium,finding,warpgate-protocol-mysql/src/common.rs:29,FP,same MySQL caching_sha2_password scramble (challenge hash)
+53,lemmy,fc640cf,CA064,medium,finding,crates/diesel_utils/src/connection.rs:208,TP,"lemmy installs NoCertVerifier for every TLS DB connection (`sslmode=require`); verification is off in production code and no option exists to verify (libpq `require` semantics, no verify-full)"
+54,warpgate,5d4d8da,CA064,medium,finding,vendor/sspi/src/credssp/sspi_cred_ssp/mod.rs:421,FP,vendored sspi CredSSP: the TLS cert is not PKI-validated by design; CredSSP binds the server public key in pubKeyAuth
+55,warpgate,5d4d8da,CA064,high,finding,warpgate/src/commands/healthcheck.rs:16,TH,"`warpgate healthcheck` builds a reqwest client with danger_accept_invalid_certs(true) to GET its own /info endpoint; no secret sent, result only gates a health status"
+56,warpgate,5d4d8da,CA066,medium,finding,warpgate-sso/src/logout_token.rs:114,FP,"alg is read from the header but HMAC family is rejected first and the key comes from the issuer JWKS, so no algorithm confusion"

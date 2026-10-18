@@ -826,6 +826,84 @@ apart from a library offering the same flag. A crate that declares an `Md5` type
 everywhere, including an unrelated misuse in the same crate. Both are false negatives by design, to be
 checked in the next blind round.
 
+## Blind evaluation, round 8 (new crates, after the structural fixes)
+
+Twelve crates nobody had looked at, chosen before any scan, scanned with a frozen build of the committed tree
+(`55c1d2a`, 25 rules). Two of the twelve (oauth2-rs and openidconnect-rs) returned 404 on clone and were
+replaced, before scanning, by the reserves sozu and x25519-dalek. The crates are yubikey.rs, ureq, hudsucker,
+warpgate, alloy, nostr, fedimint, iroh, lemmy, realworld-axum-sqlx, sozu and x25519-dalek. 1,015 findings,
+211 in the default view (25 findings, 186 hardening). hudsucker had none. Seeded sample (seed 20261019),
+at most 12 rows per rule and, new this round, at most 4 per crate per rule: 57 rows, labelled by one AI agent
+(report: [blind/round8_report.md](blind/round8_report.md), labels:
+[blind/labels_round8.csv](blind/labels_round8.csv)). The numbers below were recomputed from the CSV.
+
+| Slice | n | TP | TH | NP | FP | Strict | TP-only |
+|---|---|---|---|---|---|---|---|
+| Findings (every rule except CA010-CA013, CA015, CA016) | 24 | 7 | 3 | 1 | 13 | 41.7% (10/24) | 29.2% (7/24) |
+| Hardening (CA010-CA013, CA015, CA016) | 33 | 1 | 22 | 0 | 10 | 69.7% (23/33) | 3.0% (1/33) |
+| **All** | **57** | **8** | **25** | **1** | **23** | **57.9% (33/57)** | **14.0% (8/57)** |
+
+**Read the overall figure with care.** 57.9% looks like a jump from 38.8%, but it is mostly a change in the
+mix of rows, not in the tool. Strict precision depends heavily on how many rows are hardening, and hardening
+rows count as positives when the type really holds a secret (all 12 CA015 rows were TH). Split the same way,
+round 7 was 71% for hardening (17/24, no TP) and 8% for findings (2/25, one TP). So hardening is flat
+(70% then 70%), and the finding class is the one that moved (8% then 42%), on 24 rows from different crates.
+The intervals are wide and one cluster matters: 4 of the 7 finding-class true positives are one vendored
+library (warpgate's sspi Kerberos code, which logs the new password and Kerberos keys at trace level).
+Counting that cluster once, the finding class has four distinct true positives in 21 rows. Warpgate also
+supplies 26 of the 57 rows (46%), 14 of them from its vendored third-party code, so the cap of four rows per
+crate per rule did not stop one crate from dominating.
+
+**What the tool found that was real (8 rows, 5 distinct problems):**
+- sspi's trace-level logging of the new password and Kerberos keys (CA014, 4 rows, vendored in warpgate).
+- nostr compares a NIP-44 HMAC with `!=` (CA021).
+- sozu stores Basic-auth credentials as an unsalted `sha256(password)` (CA063).
+- lemmy installs an accept-any-certificate verifier on every TLS database connection, with no option to turn
+  verification on (CA064).
+- iroh's relay prints its configuration with `{:#?}`, which reaches bearer tokens held by a sibling type
+  (CA010; the tool flagged the config enum, not the type that is printed).
+
+CA063 and CA064 were added after 0.5.0, and these are their first real hits in a blind round (round 7 had one
+true positive in 49 rows, and none from the new rules).
+
+**By rule:** CA014 4/4 (all one cluster), CA015 12/12 TH, CA010 6/12 (1 TP, 5 TH), CA013 4/8, CA021 2/10, CA063
+1/4, CA064 2/3, CA029 1/1, CA062 0/1 (NP), CA066 0/1. CA021 is the noisiest rule: 8 of 10 were false
+positives, 4 of them public `tags` (nostr and sozu), the same cause as in round 7 and still not fixed.
+
+**False positives (23):** not a secret or a MAC by meaning (17: public keys, a database key, signed
+transactions, `tag` fields, public digests); a hand-written `Debug` that already prints `[redacted]` (1); a
+protocol that mandates the construct (4: the MySQL `caching_sha2_password` scramble, vendored CredSSP); a
+guard the tool does not see (1, an HMAC rejected before `Validation::new(header.alg)`).
+
+**Did the structural fixes carry over?** Partly, and one cost showed up.
+- **Verification switches gated by a setting (CA064, CA065): carried over.** It applied correctly to ureq's
+  `disable_verification`, to warpgate's `tls.verify` and `accept_invalid_*` parameters, and to test-only
+  verifiers in iroh and sozu. **One real cost:** warpgate's RDP target option `verify_tls` defaults to off, so
+  RDP server certificates are not verified by default. It is documented, and CredSSP binds the server key
+  separately, but my gate demoted it to low. This is the false negative the change was documented to risk.
+  lemmy's `sslmode=require` condition stayed medium, and the real finding there was high.
+- **Libraries offering the primitive (CA024, CA025): carried over.** CA024 had four false positives in
+  round 7 and no default-view findings in round 8; all 55 low ones are libraries or protocol code. CA025 never
+  fired, so it was not tested.
+- **Public function named after the hash (CA063): not demonstrated.** No `md5_hash`-style function occurred,
+  and a near-miss showed the limit: warpgate's `pub fn compute_sha2_auth_challenge_response` (the MySQL scramble)
+  stayed medium and gave three false positives, because `sha2` is not in the list of hash names, while its
+  SHA-1 sibling in the same file went low.
+- The agent read all 74 low CA024, CA063, CA064 and CA065 findings and found none that looked like real
+  misuse in application code, apart from the warpgate RDP case above.
+
+**Missed by the tool (anecdote, not a recall measurement):** warpgate RDP verifies no certificate by default
+(above); fedimint's gateway migration hashes the gateway password as one salted SHA-256 (historical code, CA063
+did not fire); iroh's `examples/auth-hook.rs:343` compares a bearer token with `==` (example code; CA029 needs a
+function named like a check); nostr NIP-04 is AES-CBC with no MAC (it is the specification, and no rule covers it).
+
+**What round 8 says.** The default view held more real findings than in round 7 (one true positive in 49 rows):
+five distinct real problems in 57 rows, though on different crates and a different sampling cap. Two things are still wrong. Hardening is flat at about 70% strict with almost no
+TP, which is what hardening should look like. And the finding class is still noisy (CA021 2 of 10, CA063 1 of
+4), dominated by the same causes as before. The six suggestions in the report (skip `tag` and public-key
+names, recognise `[redacted]`, widen the CA063 hash list, and so on) are untested and would again be written
+against this sample.
+
 ## Second labeller on round 5
 
 A second, independent labeller labelled the same 52 round 5 findings without seeing the first labels
