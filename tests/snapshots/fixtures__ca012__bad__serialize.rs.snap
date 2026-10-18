@@ -4,6 +4,6 @@ expression: snap
 ---
 3:10 CA012 [high/low] `#[derive(Serialize)]` on `Config` serialises secret field `api_key`
 9:10 CA012 [high/low] `#[derive(Serialize)]` on `Wallet` serialises secret field `seed`
-15:17 CA012 [high/high] `#[derive(Serialize)]` on `SessionKey` serialises secret field `0`
+15:17 CA012 [high/low] `#[derive(Serialize)]` on `SessionKey` serialises secret field `0`
 18:10 CA012 [high/low] `#[derive(Serialize)]` on `Auth` serialises secret field `Basic::password`
 24:38 CA012 [high/low] `#[derive(Serialize)]` on `Credentials` serialises secret field `password`

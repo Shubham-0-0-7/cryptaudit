@@ -1,0 +1,9 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+13:30 CA029 [high/medium] `password` from the caller is compared with `==`, which stops at the first different byte: an attacker who can try many guesses can recover it one character at a time by timing the replies
+19:23 CA029 [high/medium] `password` from the caller is compared with `==`, which stops at the first different byte: an attacker who can try many guesses can recover it one character at a time by timing the replies
+23:18 CA029 [high/medium] `token` from the caller is compared with `==`, which stops at the first different byte: an attacker who can try many guesses can recover it one character at a time by timing the replies
+28:16 CA029 [high/medium] `secret` from the caller is compared with `!=`, which stops at the first different byte: an attacker who can try many guesses can recover it one character at a time by timing the replies
+34:12 CA029 [high/medium] `password` from the caller is compared with `==`, which stops at the first different byte: an attacker who can try many guesses can recover it one character at a time by timing the replies

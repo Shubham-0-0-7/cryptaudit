@@ -1,0 +1,7 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+4:8 CA015 [medium/low] `ScanState` holds secret `key_buf` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it
+8:8 CA015 [medium/low] `Header` holds secret `token` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it
+12:8 CA015 [medium/low] `OldEpochMemberData` holds secret `credential` but is never zeroized: no `Zeroize`/`ZeroizeOnDrop` derive, and no `Drop` that wipes it

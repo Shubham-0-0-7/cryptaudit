@@ -4,6 +4,7 @@ use crate::source::ParsedFile;
 mod bytes;
 mod ca010;
 mod compare;
+mod credential;
 mod derives;
 mod kdf;
 mod keys;
@@ -47,6 +48,7 @@ pub fn all() -> Vec<Box<dyn Rule>> {
         Box::new(rng::TimeSeed),
         Box::new(zeroize::MissingZeroize),
         Box::new(zeroize::ManualZeroing),
+        Box::new(credential::PasswordEq),
         Box::new(kdf::WeakCost),
         Box::new(kdf::FastPasswordHash),
         Box::new(legacy::WeakPrimitive),
