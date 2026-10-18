@@ -1,7 +1,7 @@
 #[derive(PartialEq)] // expect: CA013 high
 struct SessionKey([u8; 32]);
 
-#[derive(Clone, PartialEq, Eq)] // expect: CA013 high
+#[derive(Clone, PartialEq, Eq)] // expect: CA013 low
 struct Credentials {
     username: String,
     password: String,

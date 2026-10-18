@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+2:17 CA011 [medium/low] `#[derive(Copy)]` on `CacheKey`: every move silently duplicates secret field `sighash`, and `Drop` (so `ZeroizeOnDrop`) is impossible

@@ -14,7 +14,7 @@ use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::secret::{
     Strength, TypeClass, classify_name, classify_type, classify_type_name, is_ciphertext_name,
-    is_excluded, is_place_name, is_public_name, is_record_name, is_size_name,
+    is_excluded, is_place_name, is_public_name, is_record_name, is_size_name, words,
 };
 use crate::source::ParsedFile;
 
@@ -60,8 +60,11 @@ Confidence:
           under a neutral name, or a string field
   low     a field whose type is another named type: whether it leaks
           depends on that type's own Debug impl
-Fields of `secrecy` types, and fields marked `#[debug(skip)]` or
-`#[derivative(Debug = \"ignore\")]`, are not reported. A hand-written Debug
+Fields of `secrecy` types, and fields marked `#[debug(skip)]`,
+`#[derivative(Debug = \"ignore\")]`, `#[sensitive]` or `#[redact]`, are not
+reported, nor are fields whose doc comment calls them public. A tuple variant of
+an enum called `*Error` (`InvalidJwtSecret(String)`) holds the error message, not
+the secret, and is not reported. A hand-written Debug
 that passes the value through a closure returning a literal
 (`.map(|_| \"[REDACTED]\")`) is not reported either. Types named for a place
 (`*Paths`, `*Location`) and integers named `seed` in a `*Request`, `*Response`,
@@ -139,9 +142,9 @@ pub(super) struct DeriveHit {
     pub ty: String,
     /// `(field label, confidence)`. Enum fields are labelled `Variant::field`.
     pub leaks: Vec<(String, Confidence)>,
-    /// True if at least one leaking field holds raw bytes (a key array, a `Vec<u8>`),
-    /// as opposed to a string or a number.
-    pub bytes: bool,
+    /// A struct with exactly one field: a newtype around a key, not a record that
+    /// happens to contain one.
+    pub single_field: bool,
 }
 
 impl DeriveHit {
@@ -179,13 +182,18 @@ pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool)
                 continue;
             }
             let name = s.ident.to_string();
-            let leaks = leaking_fields(classify_type_name(&name), &s.fields, skip);
+            let leaks = leaking_fields(
+                classify_type_name(&name),
+                &s.fields,
+                skip,
+                derive != "Debug",
+            );
             let leaks = drop_request_ints(&name, &s.fields, leaks);
             if !leaks.is_empty() {
                 out.push(DeriveHit {
                     span,
                     ty: name,
-                    bytes: leaks_bytes(&s.fields, &leaks),
+                    single_field: s.fields.len() == 1,
                     leaks,
                 });
             }
@@ -198,12 +206,18 @@ pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool)
         if let Some(span) = derive_span(&e.attrs, derive) {
             let enum_strength = classify_type_name(&e.ident.to_string());
             let mut leaks = Vec::new();
-            let mut bytes = false;
+            // `InvalidJWTSecret(String)` in an `Error` enum holds the message of what
+            // went wrong, not the secret.
+            let is_error = words(&e.ident.to_string())
+                .last()
+                .is_some_and(|w| matches!(w.as_str(), "error" | "errors" | "err"));
             for v in &e.variants {
+                if is_error && matches!(v.fields, Fields::Unnamed(_)) {
+                    continue;
+                }
                 let strength = enum_strength.max(classify_name(&v.ident.to_string()));
-                let found = leaking_fields(strength, &v.fields, skip);
+                let found = leaking_fields(strength, &v.fields, skip, derive != "Debug");
                 let found = drop_request_ints(&e.ident.to_string(), &v.fields, found);
-                bytes |= leaks_bytes(&v.fields, &found);
                 for (label, conf) in found {
                     leaks.push((format!("{}::{label}", v.ident), conf));
                 }
@@ -212,7 +226,7 @@ pub(super) fn derive_hits(items: &Items, derive: &str, skip: fn(&Field) -> bool)
                 out.push(DeriveHit {
                     span,
                     ty: e.ident.to_string(),
-                    bytes,
+                    single_field: false,
                     leaks,
                 });
             }
@@ -243,14 +257,6 @@ fn drop_request_ints(
                 .is_none_or(|(_, f)| classify_type(&f.ty) != TypeClass::Int)
         })
         .collect()
-}
-
-/// Does any of the leaking fields hold raw bytes?
-fn leaks_bytes(fields: &Fields, leaks: &[(String, Confidence)]) -> bool {
-    fields.iter().enumerate().any(|(i, f)| {
-        let label = f.ident.as_ref().map_or(i.to_string(), ToString::to_string);
-        leaks.iter().any(|(l, _)| *l == label) && classify_type(&f.ty) == TypeClass::Bytes
-    })
 }
 
 /// Returns the span of `name` in `#[derive(.., name)]` or
@@ -294,21 +300,95 @@ pub(super) fn derive_span(attrs: &[Attribute], name: &str) -> Option<Span> {
     None
 }
 
+/// `strict` is for the derives other than `Debug`: for them a name that only says
+/// `key` or `credential` is not enough on its own (see [`strict_cap`]).
 pub(super) fn leaking_fields(
     owner: Option<Strength>,
     fields: &Fields,
     skip: fn(&Field) -> bool,
+    strict: bool,
 ) -> Vec<(String, Confidence)> {
+    let type_owner = owner;
     let owner = fallback_owner(owner, fields);
     fields
         .iter()
         .enumerate()
-        .filter(|(_, f)| !skip(f))
+        .filter(|(_, f)| !skip(f) && !doc_says_public(f))
         .filter_map(|(i, f)| {
             let label = f.ident.as_ref().map_or(i.to_string(), ToString::to_string);
-            field_confidence(owner, f.ident.as_ref(), &f.ty).map(|c| (label, c))
+            let c = field_confidence(owner, f.ident.as_ref(), &f.ty)?;
+            let c = if strict {
+                strict_cap(type_owner, f.ident.as_ref(), &f.ty, c)
+            } else {
+                c
+            };
+            Some((label, c))
         })
         .collect()
+}
+
+/// `[u8; 16]`, `[u8; 32]` and the other lengths of a key, a seed or a MAC key.
+fn is_key_sized_array(ty: &Type) -> bool {
+    let Type::Array(a) = ty else {
+        return false;
+    };
+    let syn::Expr::Lit(len) = &a.len else {
+        return false;
+    };
+    matches!(&len.lit, syn::Lit::Int(n) if matches!(n.base10_parse::<usize>(), Ok(16 | 24 | 32 | 48 | 64)))
+}
+
+/// A doc comment on the field that calls it public or non-sensitive.
+fn doc_says_public(field: &Field) -> bool {
+    field.attrs.iter().any(|a| {
+        if !a.path().is_ident("doc") {
+            return false;
+        }
+        let text = a.to_token_stream().to_string().to_lowercase();
+        [
+            "public",
+            "non-sensitive",
+            "not sensitive",
+            "not secret",
+            "not a secret",
+        ]
+        .iter()
+        .any(|w| text.contains(w))
+    })
+}
+
+/// The stricter reading for `Copy`, `Serialize`, `PartialEq` and the zeroize
+/// rules. A field that is secret only through the weak words `key`, `token`,
+/// `credential`, in a type whose own name says nothing, is low confidence: it is
+/// a database key, a lexer token, a public identity. Likewise a neutral field
+/// that inherits a weak owner name (`AttesterKey { data }`). A named type with a
+/// named field (`CertKey { key }`) and an unnamed newtype (`Key([u8; 32])`) keep
+/// their confidence.
+pub(super) fn strict_cap(
+    type_owner: Option<Strength>,
+    name: Option<&Ident>,
+    ty: &Type,
+    c: Confidence,
+) -> Confidence {
+    let by_name = name.and_then(|n| {
+        let s = n.to_string();
+        if is_excluded(&s) || is_ciphertext_name(&s) {
+            None
+        } else {
+            classify_name(&s)
+        }
+    });
+    // `key: [u8; 32]`: a field named `key` holding an array of a cipher's key size
+    // is key material wherever it sits.
+    if by_name.is_some() && is_key_sized_array(ty) {
+        return c;
+    }
+    match (by_name, type_owner, name.is_some()) {
+        (Some(Strength::Weak), None, _) | (None, Some(Strength::Weak), true) => {
+            c.min(Confidence::Low)
+        }
+        _ => c,
+    }
 }
 
 /// The owner's name only speaks for neutral fields when no field is secret by
@@ -325,6 +405,13 @@ pub(super) fn fallback_owner(owner: Option<Strength>, fields: &Fields) -> Option
 /// `#[debug(skip)]` (derive_more), `#[derivative(Debug = "ignore")]`, `#[educe(Debug(ignore))]`.
 fn skipped_by_attr(field: &Field) -> bool {
     field.attrs.iter().any(|a| {
+        // `#[sensitive]`, `#[redact]`: a custom Debug derive that hides the field.
+        if ["sensitive", "redact", "redacted", "masked"]
+            .iter()
+            .any(|n| a.path().is_ident(n))
+        {
+            return true;
+        }
         let tokens = a.to_token_stream().to_string().to_lowercase();
         // `#[debug("<redacted>")]` (derive_more) replaces the output with a fixed string.
         tokens.contains("debug")

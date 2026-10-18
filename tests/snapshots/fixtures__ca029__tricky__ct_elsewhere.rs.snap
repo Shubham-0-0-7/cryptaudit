@@ -1,0 +1,5 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+11:12 CA029 [high/low] `password` from the caller is compared with `==`, which stops at the first different byte: an attacker who can try many guesses can recover it one character at a time by timing the replies

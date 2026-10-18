@@ -3,5 +3,7 @@ source: tests/fixtures.rs
 expression: snap
 ---
 2:10 CA013 [medium/low] `#[derive(PartialEq)]` on `Remote` compares secret field `search_api_key` with early-exit equality
-8:10 CA013 [medium/high] `#[derive(PartialEq)]` on `Account` compares secret field `secret` with early-exit equality
-15:10 CA013 [medium/high] `#[derive(PartialEq)]` on `PushRecord` compares secret field `key` with early-exit equality
+9:10 CA013 [medium/low] `#[derive(PartialEq)]` on `LoginParam` compares secret field `password` with early-exit equality
+16:10 CA013 [medium/high] `#[derive(PartialEq)]` on `Wrapper` compares secret field `api_key` with early-exit equality
+21:10 CA013 [medium/high] `#[derive(PartialEq)]` on `SessionKey` compares secret field `0` with early-exit equality
+25:10 CA013 [medium/high] `#[derive(PartialEq)]` on `StaticSecret` compares secret field `secret` with early-exit equality

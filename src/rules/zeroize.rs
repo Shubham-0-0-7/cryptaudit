@@ -10,7 +10,7 @@ use syn::visit::{self, Visit};
 use syn::{Expr, ExprMethodCall, ItemFn, ItemStruct, Lit};
 
 use super::bytes::{macro_idents, root_var};
-use super::ca010::{Items, derive_span, fallback_owner, field_confidence};
+use super::ca010::{Items, derive_span, fallback_owner, field_confidence, strict_cap};
 use super::{Rule, RuleMeta};
 use crate::finding::{Confidence, Finding, Severity};
 use crate::secret::{
@@ -52,7 +52,12 @@ Fix: `#[derive(Zeroize, ZeroizeOnDrop)]`, or hold the value in
 `zeroize::Zeroizing<..>` or `secrecy::SecretBox<..>`.
 
 Confidence is at most medium: the name heuristic is the main source of false
-positives.
+positives. A field that is secret only through the weak word `key`, `token` or
+`credential`, in a type whose own name says nothing, is low, unless it is an
+array of a key's size (`key: [u8; 32]`). A local buffer called only `key` is low
+unless a KDF or an RNG visibly filled it (`rng.fill_bytes(&mut key)`,
+`hkdf.expand(info, &mut key)`); a buffer named `secret` or `password` is medium
+without that.
 
 Command-line option structs (`#[derive(Parser)]`, `Args`, `Subcommand`) and
 types named for a place (`*Paths`, `*Location`) are not reported.
@@ -210,7 +215,9 @@ fn struct_finding(
         if ty.contains("Zeroizing") || ty.contains("Secret") || mentions_protected(&ty, protected) {
             continue;
         }
-        if let Some(c) = field_confidence(owner, f.ident.as_ref(), &f.ty) {
+        if let Some(c) = field_confidence(owner, f.ident.as_ref(), &f.ty)
+            .map(|c| strict_cap(classify_type_name(&name), f.ident.as_ref(), &f.ty, c))
+        {
             let label = f.ident.as_ref().map_or(i.to_string(), ToString::to_string);
             leaks.push((label, c));
         }
@@ -250,6 +257,10 @@ struct Local {
     span: Span,
     /// A KDF or RNG wrote into it.
     filled: bool,
+    /// Named `secret`, `password`, `private_key`: a strong secret word.
+    strong: bool,
+    /// Passed as `&mut` to a KDF or an RNG fill (`expand`, `fill_bytes`).
+    keyed: bool,
     zeroized: bool,
     /// Ownership was handed on: returned, passed by value, put in a struct.
     moved: bool,
@@ -320,11 +331,19 @@ impl<'ast> Visit<'ast> for LocalVisitor<'_> {
         if !is_buffer_init(&init.expr) && !inherited {
             return;
         }
+        let strong = classify_name(&name) == Some(crate::secret::Strength::Strong);
+        // A buffer that left an inner block already knew where it was filled from.
+        let inherited_keyed = inherited
+            && self.tail_moved[mark..]
+                .iter()
+                .any(|n| self.locals.get(n).is_some_and(|l| l.keyed));
         self.locals.insert(
             name,
             Local {
                 span: bound.ident.span(),
                 filled: inherited,
+                strong,
+                keyed: inherited_keyed,
                 zeroized: false,
                 moved: false,
             },
@@ -370,6 +389,7 @@ impl<'ast> Visit<'ast> for LocalVisitor<'_> {
                 }
             }
         }
+        self.mark_keyed(&method, c.args.iter());
         for arg in &c.args {
             self.hand_off(arg);
         }
@@ -397,6 +417,11 @@ impl<'ast> Visit<'ast> for LocalVisitor<'_> {
     }
 
     fn visit_expr_call(&mut self, c: &'ast syn::ExprCall) {
+        if let Expr::Path(f) = &*c.func {
+            if let Some(last) = f.path.segments.last() {
+                self.mark_keyed(&last.ident.to_string(), c.args.iter());
+            }
+        }
         for arg in &c.args {
             self.hand_off(arg);
         }
@@ -416,7 +441,49 @@ impl<'ast> Visit<'ast> for LocalVisitor<'_> {
     }
 }
 
+/// Calls that write key material into a buffer given as `&mut`.
+const KEY_SOURCES: &[&str] = &[
+    "expand",
+    "expand_multi_info",
+    "derive_key",
+    "derive_key_into",
+    "hash_password_into",
+    "pbkdf2_hmac",
+    "pbkdf2",
+    "scrypt",
+    "fill_bytes",
+    "try_fill_bytes",
+    "fill",
+    "try_fill",
+    "getrandom",
+    "fill_random",
+];
+
 impl LocalVisitor<'_> {
+    /// `rng.fill_bytes(&mut key)`, `hkdf.expand(info, &mut key)`: a KDF or RNG wrote it.
+    fn mark_keyed<'e>(&mut self, call: &str, args: impl Iterator<Item = &'e Expr>) {
+        if !KEY_SOURCES.contains(&call) {
+            return;
+        }
+        for arg in args {
+            // `&mut key`, `key.as_mut_slice()`, `&mut key[..]`
+            let target = match arg {
+                Expr::Reference(r) if r.mutability.is_some() => Some(&*r.expr),
+                Expr::MethodCall(m)
+                    if matches!(m.method.to_string().as_str(), "as_mut_slice" | "as_mut") =>
+                {
+                    Some(&*m.receiver)
+                }
+                _ => None,
+            };
+            if let Some(n) = target.and_then(root_var) {
+                if let Some(l) = self.locals.get_mut(&n) {
+                    l.keyed = true;
+                }
+            }
+        }
+    }
+
     /// A bare `name` (not `&name`) given away: someone else now owns it.
     fn hand_off(&mut self, expr: &Expr) {
         if let Expr::Path(p) = expr {
@@ -436,9 +503,16 @@ impl LocalVisitor<'_> {
         self.tail_moved = saved_tail;
         for (name, l) in locals {
             if l.filled && !l.zeroized && !l.moved {
+                // A buffer named only `key` is a database key as often as key
+                // material; it counts when a KDF or an RNG visibly filled it.
+                let confidence = if l.strong || l.keyed {
+                    Confidence::Medium
+                } else {
+                    Confidence::Low
+                };
                 self.out.push(self.file.finding(
                     &MISSING_META,
-                    Confidence::Medium,
+                    confidence,
                     l.span,
                     format!(
                         "`{name}` is filled with key material and dropped without being zeroized"

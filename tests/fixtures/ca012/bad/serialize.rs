@@ -12,7 +12,7 @@ struct Wallet {
     label: String,
 }
 
-#[derive(serde::Serialize)] // expect: CA012 high
+#[derive(serde::Serialize)] // expect: CA012 low
 struct SessionKey([u8; 32]);
 
 #[derive(Serialize)] // expect: CA012 low

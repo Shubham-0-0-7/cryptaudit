@@ -132,13 +132,24 @@ fn is_test_attr(attr: &Attribute) -> bool {
             .is_ok_and(|m| cfg_requires_test(&m))
 }
 
-/// `test` and `all(test, ..)` require test; `any(test, ..)` and `not(test)` do not.
+/// `test` and `all(test, ..)` require test; `any(test, ..)` and `not(test)` do not,
+/// except `any(test, debug_assertions)`: code that only exists in test and debug
+/// builds is a test helper, never part of a release.
 pub(crate) fn cfg_requires_test(meta: &Meta) -> bool {
     match meta {
         Meta::Path(p) => p.is_ident("test"),
         Meta::List(list) if list.path.is_ident("all") => list
             .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
             .is_ok_and(|metas| metas.iter().any(cfg_requires_test)),
+        Meta::List(list) if list.path.is_ident("any") => list
+            .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+            .is_ok_and(|metas| {
+                metas.iter().any(cfg_requires_test)
+                    && metas.iter().all(|m| {
+                        cfg_requires_test(m)
+                            || matches!(m, Meta::Path(p) if p.is_ident("debug_assertions"))
+                    })
+            }),
         _ => false,
     }
 }
