@@ -2,7 +2,7 @@
 
 Static analysis for cryptographic API misuse in Rust code.
 
-> **Status: early development.** Seventeen rules are implemented. More are planned; see the [roadmap](#roadmap).
+> **Status: early development.** Twenty-five rules are implemented. More are planned; see the [roadmap](#roadmap).
 
 Modern ciphers like ChaCha20-Poly1305 and AES-GCM are sound. Real systems still break because the API is used wrongly: a reused nonce, a hardcoded key, a tag compared with `==`, a secret printed through `#[derive(Debug)]`. `cryptaudit` looks for these mistakes in your source code.
 
@@ -146,6 +146,8 @@ Run `cargo cryptaudit --explain CA013` for the full description of a rule, with 
 
 Each finding has a severity (impact if exploited) and a confidence (how likely it is a true positive). Low-confidence findings are hidden by default, so the first run stays quiet. The rule list is based on a [taxonomy of Rust crypto misuse](docs/taxonomy.md); many patterns in it are specific to Rust, such as derive macros that leak secrets, `Copy` types that cannot be zeroized, and zeroing code that the optimiser removes.
 
+**How accurate is it?** Measured, not claimed. On the last blind round (twelve crates nobody had looked at, 57 sampled reports labelled by an AI agent, not a human), the reports that point at code wrong on its own were worth acting on or fixing about 42% of the time (10 of 24), and five distinct real problems were found: a database client that accepts any TLS certificate, an HMAC compared with `!=`, passwords stored as an unsalted SHA-256, and passwords written to a trace log. The hardening reports were useful about 70% of the time (23 of 33), but almost none showed a leak happening. Treat that as one sample with wide error bars: one crate supplied 46% of the rows, the three rounds before it measured 31% on a mix of both kinds, and the noisiest rule (CA021) was right only 2 times in 10. Expect false positives; every one can be silenced with a reason (see [Silencing a finding](#silencing-a-finding)).
+
 Evaluation on real crates, with every finding labelled true or false positive, is in [eval/triage.md](eval/triage.md). Recall on crates with known bugs (RustSec advisories) is in [eval/recall.md](eval/recall.md): 3 of 8 in-scope bugs on the first pass, 5 of 8 after two rule changes.
 
 ## How it differs from existing tools
@@ -181,7 +183,7 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 - [x] A seventh blind round on unseen crates: strict precision 39% (19/49, within noise of 31%), TP-only 2%; the new rules found nothing real and were noisy on libraries ([eval/triage.md](eval/triage.md))
 - [x] Structural fixes after round 7: a verification switch that a caller sets, and a library offering the primitive, are low instead of high; hardening reports are listed apart from findings and do not fail the exit status ([eval/triage.md](eval/triage.md); in-sample, so not a precision figure)
 - [x] An eighth blind round on unseen crates: findings 42% strict (10/24) and hardening 70% (23/33), five distinct real problems found (a database client that accepts any TLS certificate, an HMAC compared with `!=`, passwords stored as an unsalted SHA-256), but one crate supplied 46% of the sample and CA021 was still 2 of 10 ([eval/triage.md](eval/triage.md))
-- [ ] Release 0.6.0 with a README claim based on that round
+- [x] Release 0.6.0: the README claim is the round 8 class-split numbers, measured on the build that was released
 
 ## Authors
 
