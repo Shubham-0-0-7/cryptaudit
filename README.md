@@ -180,7 +180,7 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 - [x] Round 6 fix pass: CA012 hidden by default, CA013 only on newtypes, stricter names for CA011 and CA015, CA010 honours `#[sensitive]`; CA029 for a password compared with `==` (measured on the same crates, so not a precision figure)
 - [x] A seventh blind round on unseen crates: strict precision 39% (19/49, within noise of 31%), TP-only 2%; the new rules found nothing real and were noisy on libraries ([eval/triage.md](eval/triage.md))
 - [x] Structural fixes after round 7: a verification switch that a caller sets, and a library offering the primitive, are low instead of high; hardening reports are listed apart from findings and do not fail the exit status ([eval/triage.md](eval/triage.md); in-sample, so not a precision figure)
-- [ ] An eighth blind round on unseen crates, to see whether the structural fixes carry over
+- [x] An eighth blind round on unseen crates: findings 42% strict (10/24) and hardening 70% (23/33), five distinct real problems found (a database client that accepts any TLS certificate, an HMAC compared with `!=`, passwords stored as an unsalted SHA-256), but one crate supplied 46% of the sample and CA021 was still 2 of 10 ([eval/triage.md](eval/triage.md))
 - [ ] Release 0.6.0 with a README claim based on that round
 
 ## Authors
