@@ -684,6 +684,105 @@ CA062 only sees a literal or a same-file constant, so a work factor read from co
 checked. CA063 reads names: a password called `pw` or `secret` is missed. CA064 cannot tell a test
 helper outside a `tests/` directory from production code.
 
+## Round 6 fix pass, and CA029
+
+Round 6 said the name heuristic is not enough for the three derive rules and CA015, so this pass
+changes how they decide instead of adding words. Written against the round 6 sample, so it cannot
+be measured on it; round 7 on new crates is the test.
+
+| Change | Rule | Why |
+|---|---|---|
+| Always low confidence (hidden by default) | CA012 | 4 of 22 reports useful across rounds 5 and 6 (the four were root keys and account secrets); the rest were request bodies, keystore rows and ciphertext. Serialising is what these types are for |
+| Fire only on a newtype (one field) or a type named like a clear secret; any other struct is low | CA013 | 11 of 12 round 6 reports were settings, database-row or syntax-tree records compared when they change |
+| A field secret only through `key`, `token` or `credential` in a type whose own name says nothing is low, unless it is `[u8; 16/24/32/48/64]`; a neutral field inheriting a weak type name is low | CA011, CA013, CA015 | database keys, lexer tokens, public credentials, a signature hash in a `CacheKey` |
+| A local buffer called only `key` is low unless a KDF or an RNG visibly filled it (`fill_bytes(&mut key)`, `expand(.., &mut key)`, `pbkdf2(.., key.as_mut_slice())`) | CA015 | a database row key built from an index, a vector of result indices |
+| `#[sensitive]`, `#[redact]`, `#[redacted]`, `#[masked]` on a field hide it; a field whose doc comment says "public" or "non-sensitive" is skipped | CA010 and the derive rules | a custom redacting derive; fields documented as public |
+| A tuple variant of an enum named `*Error` holds the message, not the secret | CA010 | `InvalidJwtSecret(String)` |
+| `#[cfg(any(test, debug_assertions))]` is test code | all | a key in a test-only constructor |
+
+**Checks.** Against the 0.5.0 binary on the 36 crates cloned for rounds 4, 5 and 6, 208 findings at
+medium or high confidence disappear (745 to 537) and none appears. Of the 208, 38 were labelled false
+positives, 9 were labelled true hardening, none was labelled a true positive, and 161 were never
+labelled. The nine hardening findings lost are four root keys and account secrets serialised (CA012),
+a push-subscription record and a mail account compared with the derived `==` (CA013), a post key, a
+certificate key, and a WireGuard peer that is `Copy`. That is the price of the change.
+
+On the labelled samples the fixes were written against (so, in-sample, not a precision figure):
+round 6, 25 shown of which 16 true or hardening (64%); round 5, 17 shown of which 10 (59%); round 4,
+42 shown of which 23 (55%).
+
+**CA029, password compared with `==`.** The shadowsocks-rust miss from round 6. It looks for a function
+named like a check (`check_user`, `verify_token`, `authenticate`, `login`, `is_valid`) that returns a
+bool, and a parameter named `password`, `token`, `secret` or similar compared with `==` or `!=` against a
+value that is not a parameter, a literal or a constant. Two parameters compared with each other
+(a confirm-password field) are skipped; a file that already uses `ct_eq` gets low confidence. On the 36
+crates it reports 3: the two `check_user` functions in shadowsocks-rust (the bug round 6 found by hand), and a
+client in firezone that compares the credentials it is handed with the ones it holds, to see whether they
+changed, which is not an attacker's guess. Two of three, in a probe where the rule was written knowing the
+first two; not a precision figure.
+
+## Blind evaluation, round 7 (new crates, round 6 fix pass and the new rules)
+
+Round 7 measures the build after the round 6 fix pass, with the new rules CA024, CA025, CA029 and CA062
+to CA066, on twelve crates the tool had never seen: actix-web, Rocket, loco, rauthy, reqwest,
+mongo-rust-driver, rust-postgres, lettre, bdk, rathole, rustic and trussed. The scanner was a frozen copy
+of the working tree (version 0.5.0, 25 rules). 524 findings, 180 at medium or high confidence. The sample
+is 49 findings (seed 20261018). The labeller is one AI agent, not a human. The full report is in
+[blind/round7_report.md](blind/round7_report.md), the labels in [blind/labels_round7.csv](blind/labels_round7.csv).
+
+| Round | Sampled | Strict precision | TP-only |
+|---|---|---|---|
+| 5 | 52 | 31% | 12% |
+| 6 (released 0.5.0) | 55 | 30.9% | 9.1% |
+| 7 (this build) | 49 | **38.8% (19/49)** | **2.0% (1/49)** |
+
+**Reading it honestly.** Strict precision rose by eight points, but with about 50 findings a round that is
+inside sampling noise (a 95% interval on 19/49 is roughly 26 to 53%), and all of the gain is hardening:
+18 of the 19 positives are TH, none shows a sink. TP-only fell to one finding in 49. One crate dominates:
+rauthy gave 123 of the 180 default-view findings and 22 of the 49 sampled rows, so the numbers are close to
+"rauthy plus a few others". bdk produced no findings. CA011, CA012 and CA013 produced no default-view findings
+at all (111 low-confidence CA012 and 26 low-confidence CA013 stayed hidden), so the fix pass's effect on them
+shows as silence, which this sample cannot judge as right or wrong.
+
+| Rule | n | TP | TH | NP | FP | Strict |
+|---|---|---|---|---|---|---|
+| CA010 | 12 | 0 | 8 | 0 | 4 | 67% |
+| CA015 | 12 | 0 | 9 | 0 | 3 | 75% |
+| CA014 | 2 | 1 | 0 | 0 | 1 | 50% |
+| CA021 | 4 | 0 | 1 | 0 | 3 | 25% |
+| CA018 | 3 | 0 | 0 | 0 | 3 | 0% |
+| CA024 | 4 | 0 | 0 | 0 | 4 | 0% |
+| CA063 | 2 | 0 | 0 | 0 | 2 | 0% |
+| CA064 | 8 | 0 | 0 | 1 | 7 | 0% |
+| CA071 | 2 | 0 | 0 | 1 | 1 | 0% |
+| **All** | **49** | **1** | **18** | **2** | **28** | **38.8%** |
+
+**The new rules found nothing real.** Fourteen default-view findings, none a true positive: CA064 flagged
+code that implements an opt-in switch for self-signed certificates in reqwest, the MongoDB driver, lettre
+and rauthy (7 of 8; the eighth is a Rocket test client); CA024 flagged a feature-gated 3DES mechanism
+inside an embedded key service (4); CA063 flagged the MD5 exchange the Postgres wire protocol requires
+(2). CA025, CA029, CA062 and CA066 did not fire, and CA065 gave six low-confidence findings. Silence is the
+right answer when a crate has no such code; whether the rules would fire on bad code is a recall question
+this round cannot answer. What it does show is that CA064, CA024 and CA063 are noisy on libraries that
+implement the thing they are named for, which was the known limit written into their documentation.
+
+The 28 false positives, by cause: TLS verification off inside code that implements an opt-in switch (7);
+a field that is not a secret (a duration, a URL, a hash of a one-time password, ciphertext, a CSRF token)
+(6); a library implementing the primitive it is named for (6); a public value compared by a `tag` name,
+HTTP ETags and replica-set tags (3); `unwrap` on the application's own stored ciphertext (3); intended
+output or documented design (2); a `Debug` that already redacts (1).
+
+**The one true positive:** rathole logs the expected `SHA-256(token || nonce)` digest at debug level when
+authentication fails. Its comparison of the same digest with `!=` was labelled TH, not TP: the nonce is fresh
+per connection, so a timing attack has no stable target. No bug the tool should have caught turned up while
+reading about fifty code regions, which is an anecdote and not a recall measurement.
+
+**What round 7 says about the project.** Across rounds 5, 6 and 7 (156 labelled findings) strict precision
+is 31%, 31% and 39%, and TP-only 12%, 9% and 2%. Two fix passes written against a sample did not move the
+number on the next sample. The rules that keep their value are CA014 (3 of 3, then 1 of 2) and, for
+hardening, CA010 and CA015. The rest of the default view is mostly noise on libraries and config structs. The
+eight fixes proposed in the report would again be written against this sample.
+
 ## Second labeller on round 5
 
 A second, independent labeller labelled the same 52 round 5 findings without seeing the first labels

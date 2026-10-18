@@ -1,0 +1,50 @@
+id,repo,commit,rule,confidence,location,label,reason
+0,rauthy,ea58753,CA010,high,src/data/src/rauthy_config.rs:4138,TH,derive(Debug) on config struct holding pg passwords; no code path found that prints the config (project hand-writes redacting Debug for User/ApiKey)
+1,rauthy,ea58753,CA010,high,src/data/src/migration/bootstrap/types.rs:167,FP,"flagged field access_token_lifetime is a duration, not a secret"
+2,mongo-rust-driver,3b7fc93,CA010,high,driver/src/client/options.rs:1124,TH,derive(Debug) on private parse-state struct holding socks5 proxy_password; never printed in code read
+3,rauthy,ea58753,CA010,high,src/api_types/src/pam.rs:50,TH,derive(Debug) on login request DTO with password/host_secret; handler logs only payload.getent so no sink shown
+4,rauthy,ea58753,CA010,medium,src/data/src/html/templates.rs:47,FP,CSRF token variant in an HTML template enum is per-page and not credential material; enum is never debug-printed
+5,loco,9f7e021,CA010,high,src/config/auth.rs:25,TH,derive(Debug) on JWT config with plaintext signing secret; no code that logs the config found
+6,rauthy,ea58753,CA010,high,src/data/src/rauthy_config.rs:4196,TH,derive(Debug) on email config holding smtp_password and xoauth secret; no sink shown
+7,rauthy,ea58753,CA010,high,src/data/src/email/smtp_oauth_token.rs:20,TH,"derive(Debug) on OAuth token response with access_token; value is consumed, never debug-printed"
+8,rauthy,ea58753,CA010,high,src/data/src/entity/auth_providers.rs:154,FP,"""secret"" fields are encrypted bytes, token_endpoint is a URL and the others are bools; no plaintext secret in Debug"
+9,rauthy,ea58753,CA010,high,src/data/src/entity/auth_providers.rs:705,TH,"derive(Debug) on upstream /token response with access_token; error paths log only err strings, no sink"
+10,rust-postgres,6c161e3,CA010,high,tokio-postgres/src/config.rs:776,FP,Debug impl already redacts: the password is mapped to a Redaction placeholder
+11,mongo-rust-driver,3b7fc93,CA010,high,driver/src/action/csfle/create_data_key.rs:38,TH,public options struct deriving Debug with optional 96-byte custom data-key material; no logging sink shown
+12,rathole,a292f7e,CA014,medium,src/lib.rs:52,FP,genkey subcommand whose purpose is to print the freshly generated keypair to the terminal
+13,rathole,a292f7e,CA014,high,src/server.rs:327,TP,"on auth failure debug! logs the expected SHA-256(token||nonce) digest, enabling offline token guessing for anyone with log access"
+14,rauthy,ea58753,CA015,medium,src/data/src/rauthy_config.rs:4319,TH,"long-lived matrix access token and password in config struct, never zeroized"
+15,rauthy,ea58753,CA015,medium,src/api_types/src/oidc.rs:512,TH,"request DTO carrying token and client_secret, not zeroized (credential in plain String)"
+16,rauthy,ea58753,CA015,medium,src/api_types/src/oidc.rs:358,TH,"request DTO carrying client_secret, not zeroized"
+17,rauthy,ea58753,CA015,medium,src/data/src/entity/sessions.rs:30,FP,"csrf_token is a per-session anti-CSRF value, not key material; zeroizing it has no benefit"
+18,rauthy,ea58753,CA015,medium,src/api_types/src/auth_providers.rs:21,TH,"provider request DTO carrying upstream client_secret, not zeroized (token_endpoint is only a URL)"
+19,rauthy,ea58753,CA015,medium,src/data/src/entity/pam/remote_password.rs:10,FP,"field stores SHA-256 of a random one-time password, not the password itself"
+20,rauthy,ea58753,CA015,medium,src/data/src/entity/kv.rs:366,FP,"secret field is an encrypted blob (EncValue), plaintext is only produced on demand"
+21,loco,9f7e021,CA015,medium,src/config/mailer.rs:91,TH,"SMTP password in config struct held as plain String, not zeroized"
+22,rauthy,ea58753,CA015,medium,src/api_types/src/kv.rs:53,TH,"response DTO holding plaintext KV access secret returned once to admin; short-lived, hardening only"
+23,rathole,a292f7e,CA015,medium,src/transport/noise.rs:10,TH,"long-lived Noise static private key in Vec<u8>, not zeroized"
+24,rauthy,ea58753,CA015,medium,src/data/src/secrets.rs:18,TH,"database passwords read from secrets file held in plain String, not zeroized"
+25,mongo-rust-driver,3b7fc93,CA015,medium,driver/src/client/csfle/state_machine.rs:635,TH,"Azure IMDS access token response held in plain String; short-lived token, hardening only"
+26,rauthy,ea58753,CA018,medium,src/data/src/entity/pam/hosts.rs:548,FP,"decrypts the server own stored value, not attacker input; panic means key mismatch or corruption, not an expected authentication failure"
+27,rauthy,ea58753,CA018,medium,src/data/src/migration/bootstrap/clients.rs:83,FP,startup bootstrap with expect messages telling the operator to fix ENC_KEY; deliberate fail-fast
+28,rauthy,ea58753,CA018,medium,src/data/src/migration/bootstrap/api_key.rs:187,FP,startup bootstrap with expect messages telling the operator to fix ENC_KEY; deliberate fail-fast
+29,actix-web,0ea6374,CA021,medium,actix-web/src/http/header/entity.rs:115,FP,"HTTP ETag opaque-tag comparison, a public cache validator not a MAC"
+30,mongo-rust-driver,3b7fc93,CA021,medium,driver/src/sdam/description/server.rs:175,FP,"compares server-selection replica-set tags from hello responses, not a MAC"
+31,rathole,a292f7e,CA021,high,src/server.rs:322,TH,"rathole compares expected auth digest with != against client input, but the nonce is fresh per connection so a byte-by-byte timing attack has no stable target; cheap to fix with constant-time compare"
+32,actix-web,0ea6374,CA021,medium,actix-web/src/http/header/entity.rs:121,FP,"HTTP ETag opaque-tag comparison, a public cache validator not a MAC"
+33,trussed,3a68a78,CA024,medium,core/src/mechanisms.rs:745,FP,feature-gated Tdes mechanism trait of a key-service library offering the primitive (PIV 3DES compatibility)
+34,trussed,3a68a78,CA024,medium,src/mechanisms/tdes.rs:84,FP,"library implementation of an optional 3DES mechanism, not application misuse"
+35,trussed,3a68a78,CA024,medium,src/mechanisms/tdes.rs:52,FP,"library implementation of an optional 3DES mechanism, single-block ECB-style PIV use"
+36,trussed,3a68a78,CA024,medium,src/mechanisms/tdes.rs:22,FP,"library implementation of an optional 3DES mechanism, not application misuse"
+37,rust-postgres,6c161e3,CA063,medium,postgres-protocol/src/authentication/mod.rs:15,FP,postgres-protocol client implementing the MD5 password exchange the wire protocol mandates; not password storage
+38,rust-postgres,6c161e3,CA063,medium,postgres-protocol/src/password/mod.rs:104,FP,"helper that builds the protocol-mandated md5 password string (username is the salt by spec), a protocol library not a storage scheme"
+39,Rocket,3a54d07,CA064,high,testbench/src/client.rs:22,NP,testbench client for Rocket integration tests against self-signed certs
+40,mongo-rust-driver,3b7fc93,CA064,medium,driver/src/runtime/tls_openssl.rs:87,FP,"only when the user sets tlsAllowInvalidCertificates; documented driver option, secure by default"
+41,rauthy,ea58753,CA064,high,src/data/src/database.rs:161,FP,only when operator sets pg_tls_no_verify config for self-signed Postgres; documented opt-in
+42,reqwest,2230ed3,CA064,high,src/tls.rs:674,FP,NoVerifier is the implementation behind reqwest danger_accept_invalid_certs; the library offering the switch
+43,reqwest,2230ed3,CA064,high,src/async_impl/client.rs:743,FP,selected only when the caller disabled cert verification via the danger_ builder option; secure by default
+44,rauthy,ea58753,CA064,medium,src/notify/src/lib.rs:79,FP,"disable_tls_validation is an operator-supplied parameter for the notifier, default off, deliberate opt-in"
+45,mongo-rust-driver,3b7fc93,CA064,high,driver/src/runtime/tls_rustls.rs:169,FP,NoCertVerifier used only when the user sets tlsAllowInvalidCertificates; documented driver option
+46,lettre,94b63ac,CA064,medium,src/transport/smtp/client/tls.rs:390,FP,"only when caller sets accept_invalid_certs on TlsParameters (dangerous_ builder option); library opt-in, secure by default"
+47,trussed,3a68a78,CA071,medium,src/virt.rs:41,FP,virt module is documented FOR TESTING ONLY with a deliberately constant seed
+48,loco,9f7e021,CA071,medium,loco-new/src/generator/template.rs:31,NP,seed_from_u64(42) sits under #[cfg(test)]; the non-test branch uses from_os_rng

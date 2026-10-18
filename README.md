@@ -105,8 +105,8 @@ reason = "legacy code, tracked in #42"
 |---|---|---|---|
 | CA010 | secret-in-debug | high | `#[derive(Debug)]` on a struct with secret fields, and hand-written `Debug`/`Display` impls that print a secret, including through a local variable |
 | CA011 | copy-on-secret | medium | `#[derive(Copy)]` on a secret type: every move duplicates the key, and `ZeroizeOnDrop` becomes impossible |
-| CA012 | serialize-on-secret | high | `#[derive(Serialize)]` on a secret type, unless the field has `#[serde(skip)]` or custom serialisation; high confidence only when the type itself is named like a clear secret (`SessionKey`), low for ordinary records such as `Credentials` or a request type |
-| CA013 | partialeq-on-secret | medium | `#[derive(PartialEq)]` or a hand-written `==` on a secret type, instead of a constant-time comparison |
+| CA012 | serialize-on-secret | high | `#[derive(Serialize)]` on a type holding a secret, unless the field has `#[serde(skip)]` or custom serialisation. Always low confidence, so hidden by default: most such types exist to be serialised (4 of 22 reports were useful in two blind rounds) |
+| CA013 | partialeq-on-secret | medium | `#[derive(PartialEq)]` on a newtype around a key, or a hand-written `==` on a secret type, instead of a constant-time comparison; a record that merely contains a secret is low |
 | CA014 | secret-in-log | high | a secret passed to `info!`, `println!`, `panic!`, `bail!` and similar, or recorded by `#[tracing::instrument]`; reads `{}` arguments, inline `{name}` captures and tracing fields |
 | CA015 | secret-not-zeroized | medium | a struct holding a secret with no `Zeroize`/`ZeroizeOnDrop`, or a buffer filled by a KDF or RNG and dropped without being wiped |
 | CA016 | manual-zeroing | medium | a secret wiped with `fill(0)` or a loop, which the optimiser may delete; use `zeroize` |
@@ -119,6 +119,7 @@ reason = "legacy code, tracked in #42"
 | CA025 | ecb-mode | high | `ecb::Encryptor`, `Cipher::aes_128_ecb()` and other ECB constructors; a name with ECB in it is low confidence |
 | CA027 | hardcoded-key | high | a literal, `const` or `hex!` key or IV passed to a cipher or MAC constructor |
 | CA028 | nonce-reuse | critical | the same nonce used for two encryptions, reused across loop iterations, hardcoded, derived from the clock, or filled from a cloned RNG |
+| CA029 | password-compared-with-eq | high | a password or token parameter compared with `==` against a stored value, in a function named `check_user`, `verify_token`, `authenticate` and the like |
 | CA062 | weak-password-hash-cost | medium | PBKDF2, bcrypt, scrypt or Argon2 with a literal work factor far below current guidance (for example PBKDF2 with 1,000 iterations, bcrypt cost 4) |
 | CA063 | fast-hash-of-password | high | a value named `password` passed to SHA-2, SHA-3, MD5, BLAKE2 or BLAKE3 instead of a password-hashing function; SHA-1 is low (breach-lookup services need it) |
 | CA064 | tls-certificate-validation-disabled | critical | `danger_accept_invalid_certs(true)`, `SslVerifyMode::NONE`, `ssl_verify_peer(false)`, a `ServerCertVerifier` that accepts everything; medium when it is chosen by an `if` |
@@ -163,7 +164,9 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 - [x] A sixth blind round on unseen crates: strict precision 31% again, so the round 5 fixes show no gain on new crates; CA010 and CA014 are usable, CA012, CA013 and CA015 are not ([eval/triage.md](eval/triage.md))
 - [x] A second labeller (an AI agent) on round 5: 90% agreement on strict precision, but TP versus TH is not stable ([eval/triage.md](eval/triage.md))
 - [ ] A human second labeller (Rahul) on the same findings
-- [ ] A round 6 fix pass, and a seventh round to measure it
+- [x] Round 6 fix pass: CA012 hidden by default, CA013 only on newtypes, stricter names for CA011 and CA015, CA010 honours `#[sensitive]`; CA029 for a password compared with `==` (measured on the same crates, so not a precision figure)
+- [x] A seventh blind round on unseen crates: strict precision 39% (19/49, within noise of 31%), TP-only 2%; the new rules found nothing real and were noisy on libraries ([eval/triage.md](eval/triage.md))
+- [ ] Decide what the precision work should be: a round 7 fix pass would again be written against the sample it is measured on
 
 ## Authors
 

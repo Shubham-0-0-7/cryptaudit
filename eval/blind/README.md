@@ -41,3 +41,7 @@ Columns `id,rule,confidence,location,label,reason`. Agreement is in `../triage.m
 `labels_round6.csv` is round 6: twelve more crates, scanned with the released 0.5.0, a
 seeded sample (seed 20261017) of 55 findings. Same columns as `labels_round2.csv`.
 The report is `round6_report.md`.
+
+`labels_round7.csv` is round 7: twelve more crates, scanned with a frozen copy of the
+working tree after the round 6 fix pass (25 rules), a seeded sample (seed 20261018) of 49
+findings. Same columns as `labels_round2.csv`. The report is `round7_report.md`.
