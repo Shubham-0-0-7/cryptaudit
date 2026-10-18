@@ -54,10 +54,20 @@ Fix: trust the certificate authority that signed the server's certificate
 (`add_root_certificate`), or pin the certificate, and keep validation on.
 
 Confidence:
-  high    the switch is a literal `true` (or `false` where the flag is inverted)
-  medium  the same, but only inside an `if` or `match`: an explicit opt-in such
-          as an `--insecure` command-line flag. Still dangerous, but chosen.
-  low     the switch is a variable, so it may be off or on
+  high    the switch is a literal `true` (or `false` where the flag is inverted),
+          or an accept-all verifier is installed, with nothing deciding it
+  medium  the same, but only inside an `if` or `match` on something else
+  low     the switch is a variable, so it may be off or on; or it is only
+          reached when a setting that is itself about verification says so
+          (`if config.accept_invalid_certs`, `if let Some(true) = allow_invalid`);
+          or an accept-all verifier is defined here but not installed here
+
+The last two are code that *offers* the switch: an HTTP client library
+implementing `danger_accept_invalid_certs`, a database driver reading its
+`tlsAllowInvalidCertificates` option, an operator setting that defaults to off.
+The caller chose to turn validation off, and the code that honours the choice
+is not the mistake. Those are hidden by default; `--min-confidence low` shows
+them. The application that passes a literal `true` is reported at high.
 
 Known false positives: a developer tool whose purpose is to talk to servers
 with self-signed certificates, where the flag is a setting the user turns on.
@@ -167,6 +177,7 @@ fn scan(file: &ParsedFile, rule: &'static str) -> Vec<Finding> {
         file,
         rule,
         conditional: 0,
+        opt_in: 0,
         out: Vec::new(),
         verifier_impls: Vec::new(),
         verifier_in_use: false,
@@ -244,6 +255,36 @@ fn insecure_verifier_name(name: &str) -> bool {
         || (has(&["accept"]) && has(&["all", "any"]))
 }
 
+/// Whether an `if` or `match` is decided by a setting about verification:
+/// `config.certs_verification`, `vars.pg_tls_no_verify`, `Some(true) = allow_invalid`.
+/// Code under such a condition honours a switch it exposes to its own callers.
+fn names_verification_setting(expr: &Expr) -> bool {
+    let mut idents = Vec::new();
+    idents_in(expr.to_token_stream(), &mut idents);
+    idents.iter().any(|i| {
+        words(i).iter().any(|w| {
+            matches!(
+                w.as_str(),
+                "insecure"
+                    | "invalid"
+                    | "danger"
+                    | "dangerous"
+                    | "verify"
+                    | "verification"
+                    | "verified"
+                    | "validate"
+                    | "validation"
+                    | "accept"
+                    | "allow"
+                    | "skip"
+                    | "disable"
+                    | "disabled"
+                    | "unverified"
+            )
+        })
+    })
+}
+
 /// `Ok(ServerCertVerified::assertion())` and nothing else: a verifier that
 /// accepts every certificate.
 fn accepts_everything(f: &ImplItemFn) -> bool {
@@ -288,6 +329,9 @@ struct Visitor<'a> {
     rule: &'static str,
     /// Depth of enclosing `if` / `match` branches: an opt-in flag, not a constant.
     conditional: usize,
+    /// Depth of enclosing branches whose condition names a verification setting:
+    /// the code is honouring a switch someone else exposes.
+    opt_in: usize,
     out: Vec<Finding>,
     /// Accept-all `verify_server_cert` impls, kept only if nothing here uses one.
     verifier_impls: Vec<Finding>,
@@ -309,9 +353,12 @@ impl Visitor<'_> {
         }
     }
 
-    /// High for a constant switch, medium when it sits inside an `if` or `match`.
+    /// High for a constant switch, medium when it sits inside an `if` or `match`,
+    /// low when that condition is itself a verification setting.
     fn flag_level(&self) -> Confidence {
-        if self.conditional > 0 {
+        if self.opt_in > 0 {
+            Confidence::Low
+        } else if self.conditional > 0 {
             Confidence::Medium
         } else {
             Confidence::High
@@ -321,11 +368,7 @@ impl Visitor<'_> {
     /// Confidence for a flag argument, or `None` if it is the safe value.
     fn flag_confidence(&self, arg: &Expr, unsafe_value: bool) -> Option<Confidence> {
         match bool_lit(arg) {
-            Some(v) if v == unsafe_value => Some(if self.conditional > 0 {
-                Confidence::Medium
-            } else {
-                Confidence::High
-            }),
+            Some(v) if v == unsafe_value => Some(self.flag_level()),
             Some(_) => None,
             None => Some(Confidence::Low),
         }
@@ -374,20 +417,26 @@ impl Visitor<'_> {
 impl<'ast> Visit<'ast> for Visitor<'_> {
     fn visit_expr_if(&mut self, e: &'ast syn::ExprIf) {
         self.visit_expr(&e.cond);
+        let opt_in = names_verification_setting(&e.cond);
         self.conditional += 1;
+        self.opt_in += usize::from(opt_in);
         self.visit_block(&e.then_branch);
         if let Some((_, else_branch)) = &e.else_branch {
             self.visit_expr(else_branch);
         }
+        self.opt_in -= usize::from(opt_in);
         self.conditional -= 1;
     }
 
     fn visit_expr_match(&mut self, e: &'ast syn::ExprMatch) {
         self.visit_expr(&e.expr);
+        let opt_in = names_verification_setting(&e.expr);
         self.conditional += 1;
+        self.opt_in += usize::from(opt_in);
         for arm in &e.arms {
             self.visit_arm(arm);
         }
+        self.opt_in -= usize::from(opt_in);
         self.conditional -= 1;
     }
 
@@ -444,7 +493,7 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
                     self.verifier_in_use = true;
                     self.report(
                         &CERT_META,
-                        Confidence::High,
+                        self.flag_level(),
                         call.method.span(),
                         format!(
                             "custom certificate verifier `{bad}` is named like one that accepts any certificate"
@@ -536,7 +585,7 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
         };
         self.report(
             meta,
-            Confidence::High,
+            self.flag_level(),
             path.span(),
             format!("`{last}` turns off TLS {what}, so any server is accepted"),
             "remove the option and keep validation on",
@@ -588,9 +637,9 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
             let before = self.out.len();
             self.report(
                 &CERT_META,
-                Confidence::High,
+                Confidence::Low,
                 f.sig.ident.span(),
-                "`verify_server_cert` returns success without looking at the certificate, so every server is accepted".into(),
+                "`verify_server_cert` returns success without looking at the certificate: any server is accepted wherever this verifier is installed".into(),
                 "check the certificate chain and server name, or delegate to rustls' `WebPkiServerVerifier`",
             );
             self.verifier_impls.extend(self.out.drain(before..));

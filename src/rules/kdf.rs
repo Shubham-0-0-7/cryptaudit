@@ -97,7 +97,11 @@ Confidence:
   medium  the input is named like a password
   low     SHA-1 (the k-anonymity range lookup of \"Have I Been Pwned\" hashes the
           password with SHA-1 on purpose), or the file also uses Argon2, bcrypt,
-          scrypt or PBKDF2, which suggests this is a pre-hash or a lookup key
+          scrypt or PBKDF2, which suggests this is a pre-hash or a lookup key;
+          or the hash is computed inside a public function named after it
+          (`pub fn md5_hash(user, password, salt)`), which is a library offering
+          the scheme a protocol mandates (PostgreSQL's MD5 login exchange), not
+          an application choosing how to store passwords
 
 Fix: `argon2::Argon2::default().hash_password(password, &salt)`.
 
@@ -136,6 +140,7 @@ fn scan(file: &ParsedFile, rule: &'static str) -> Vec<Finding> {
         rule,
         ints: consts.0,
         hashers: Vec::new(),
+        offering: Vec::new(),
         out: Vec::new(),
     };
     v.visit_file(&file.ast);
@@ -256,6 +261,8 @@ struct Visitor<'a> {
     ints: HashMap<String, u128>,
     /// Locals bound from `Sha256::new()` and friends: `(name, hash type)`.
     hashers: Vec<(String, &'static str)>,
+    /// For each enclosing function: is it public and named after a hash?
+    offering: Vec<bool>,
     out: Vec<Finding>,
 }
 
@@ -284,11 +291,12 @@ impl Visitor<'_> {
         let Some(name) = password_ident(input) else {
             return;
         };
-        let confidence = if hash == "sha1" || self.uses_real_kdf() {
-            Confidence::Low
-        } else {
-            Confidence::Medium
-        };
+        let confidence =
+            if hash == "sha1" || self.uses_real_kdf() || self.offering.last() == Some(&true) {
+                Confidence::Low
+            } else {
+                Confidence::Medium
+            };
         self.report(
             &FAST_META,
             confidence,
@@ -339,13 +347,19 @@ impl Visitor<'_> {
 impl<'ast> Visit<'ast> for Visitor<'_> {
     fn visit_item_fn(&mut self, f: &'ast ItemFn) {
         let saved = std::mem::take(&mut self.hashers);
+        self.offering
+            .push(offers_hash(&f.vis, &f.sig.ident.to_string()));
         visit::visit_item_fn(self, f);
+        self.offering.pop();
         self.hashers = saved;
     }
 
     fn visit_impl_item_fn(&mut self, f: &'ast syn::ImplItemFn) {
         let saved = std::mem::take(&mut self.hashers);
+        self.offering
+            .push(offers_hash(&f.vis, &f.sig.ident.to_string()));
         visit::visit_impl_item_fn(self, f);
+        self.offering.pop();
         self.hashers = saved;
     }
 
@@ -504,6 +518,16 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
         }
         visit::visit_expr_method_call(self, call);
     }
+}
+
+/// A public function named after a hash (`md5_hash`, `sha256_password`): the code
+/// that offers that scheme to callers, as opposed to code that picked it.
+fn offers_hash(vis: &syn::Visibility, name: &str) -> bool {
+    matches!(vis, syn::Visibility::Public(_))
+        && name
+            .to_lowercase()
+            .split('_')
+            .any(|part| hash_type(part).is_some())
 }
 
 /// `Sha256::new()`, `Sha256::default()`, `Sha256::new_with_prefix(..)`, with any

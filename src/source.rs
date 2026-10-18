@@ -5,7 +5,7 @@ use syn::punctuated::Punctuated;
 use syn::visit_mut::{self, VisitMut};
 use syn::{Attribute, Item, ItemMod, Meta, Token};
 
-use crate::finding::{Confidence, Finding, fingerprint};
+use crate::finding::{Class, Confidence, Finding, fingerprint};
 use crate::rules::RuleMeta;
 
 /// A parsed source file, with test-only items removed unless tests were requested.
@@ -15,6 +15,9 @@ pub struct ParsedFile {
     pub ast: syn::File,
     /// Some file of the crate implements `PartialEq` with a constant-time compare.
     pub ct_partialeq: bool,
+    /// The crate declares a type, trait or enum variant named after a broken
+    /// primitive (`Tdes`, `Md5`): it is a library offering the algorithm.
+    pub offers_primitive: bool,
 }
 
 impl ParsedFile {
@@ -28,6 +31,7 @@ impl ParsedFile {
             source,
             ast,
             ct_partialeq: false,
+            offers_primitive: false,
         })
     }
 
@@ -48,6 +52,7 @@ impl ParsedFile {
         let path = display(&self.path);
         Finding {
             rule: meta.id,
+            class: Class::of(meta.id),
             severity: meta.severity,
             confidence,
             fingerprint: fingerprint(meta.id, &path, snippet),

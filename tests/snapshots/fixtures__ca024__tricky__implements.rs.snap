@@ -1,0 +1,9 @@
+---
+source: tests/fixtures.rs
+expression: snap
+---
+5:22 CA024 [high/low] `Tdes` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
+11:22 CA024 [high/low] `des` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
+19:17 CA024 [high/low] `Rc4` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
+25:13 CA024 [high/medium] `Rc4` is a broken cipher: it can be attacked in practice, so data encrypted with it is not safe
+30:13 CA024 [high/low] `Md5` is broken for anything that needs collision resistance (signatures, certificates, tamper checks); it is fine for a plain checksum

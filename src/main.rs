@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, ValueEnum};
+use cryptaudit::finding::Class;
 use cryptaudit::{Confidence, ScanOptions, Severity, report, rules};
 
 /// Find cryptographic API misuse in Rust source code.
@@ -22,8 +23,13 @@ struct Cli {
     min_confidence: Confidence,
 
     /// Exit with status 1 if a shown finding has at least this severity
+    /// (hardening reports are listed but do not count, unless --fail-on-hardening)
     #[arg(long, value_enum, default_value_t = Severity::Low)]
     fail_on: Severity,
+
+    /// Let hardening reports (CA010-CA013, CA015, CA016) count towards --fail-on
+    #[arg(long)]
+    fail_on_hardening: bool,
 
     /// Also scan tests/, benches/, examples/, xtask/, build.rs and #[cfg(test)] code
     #[arg(long)]
@@ -122,7 +128,9 @@ fn run(cli: Cli) -> anyhow::Result<ExitCode> {
         Format::Json => println!("{}", report::json(&report, &shown)?),
         Format::Sarif => println!("{}", report::sarif(&report, &shown)?),
     }
-    let failed = shown.iter().any(|f| f.severity >= cli.fail_on);
+    let failed = shown
+        .iter()
+        .any(|f| f.severity >= cli.fail_on && (f.class == Class::Finding || cli.fail_on_hardening));
     Ok(if failed {
         ExitCode::from(1)
     } else {

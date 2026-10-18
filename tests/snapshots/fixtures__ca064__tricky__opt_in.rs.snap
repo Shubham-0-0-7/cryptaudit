@@ -2,6 +2,11 @@
 source: tests/fixtures.rs
 expression: snap
 ---
-5:27 CA064 [critical/medium] `danger_accept_invalid_certs(true)` inside a condition: TLS certificate validation is switched off when that condition holds, so any server is accepted
+5:27 CA064 [critical/low] `danger_accept_invalid_certs(..)` with a value that is not a constant: TLS certificate validation is switched off whenever that value says so
 13:10 CA064 [critical/low] `danger_accept_invalid_certs(..)` with a value that is not a constant: TLS certificate validation is switched off whenever that value says so
-23:11 CA064 [critical/medium] `set_verify(SslVerifyMode::NONE)`: the peer's certificate is not checked, so any server is accepted
+23:11 CA064 [critical/low] `set_verify(SslVerifyMode::NONE)`: the peer's certificate is not checked, so any server is accepted
+31:27 CA064 [critical/medium] `danger_accept_invalid_certs(true)` inside a condition: TLS certificate validation is switched off when that condition holds, so any server is accepted
+39:10 CA064 [critical/high] `danger_accept_invalid_certs(true)`: TLS certificate validation is switched off, so any server is accepted, including one run by an attacker in the middle
+47:11 CA064 [critical/low] `set_verify(SslVerifyMode::NONE)`: the peer's certificate is not checked, so any server is accepted
+56:14 CA064 [critical/low] custom certificate verifier `NoTlsVerifier` is named like one that accepts any certificate
+67:10 CA064 [critical/high] custom certificate verifier `NoTlsVerifier` is named like one that accepts any certificate

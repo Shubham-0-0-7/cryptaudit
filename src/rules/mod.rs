@@ -16,6 +16,8 @@ mod rng;
 mod tls;
 mod zeroize;
 
+pub use legacy::declares_primitive;
+
 pub struct RuleMeta {
     pub id: &'static str,
     pub name: &'static str,

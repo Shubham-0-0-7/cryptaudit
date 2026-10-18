@@ -70,6 +70,7 @@ pub fn scan(root: &Path, opts: &ScanOptions) -> ScanReport {
     let ct_partialeq = sources
         .iter()
         .any(|(_, s)| s.contains("fn eq") && secret::has_constant_time_call(s));
+    let offering = crates_offering_primitives(&sources);
     for (display, source) in sources {
         match ParsedFile::parse(display.clone(), source, opts.include_tests) {
             Ok(mut file) => {
@@ -77,6 +78,7 @@ pub fn scan(root: &Path, opts: &ScanOptions) -> ScanReport {
                     continue;
                 }
                 file.ct_partialeq = ct_partialeq;
+                file.offers_primitive = offering.contains(&crate_root(&display));
                 report.files_scanned += 1;
                 let found = check_file(&file, &rules);
                 if opts.suppress {
@@ -108,6 +110,24 @@ pub fn check_file(file: &ParsedFile, rules: &[Box<dyn rules::Rule>]) -> Vec<Find
     findings
 }
 
+/// The directory of the `Cargo.toml` that owns a source file.
+fn crate_root(path: &Path) -> PathBuf {
+    path.ancestors()
+        .skip(1)
+        .find(|dir| dir.join("Cargo.toml").is_file())
+        .map(Path::to_path_buf)
+        .unwrap_or_default()
+}
+
+/// Crates that declare a type or enum variant named after a broken primitive.
+fn crates_offering_primitives(sources: &[(PathBuf, String)]) -> std::collections::HashSet<PathBuf> {
+    sources
+        .iter()
+        .filter(|(_, source)| rules::declares_primitive(source))
+        .map(|(path, _)| crate_root(path))
+        .collect()
+}
+
 const TEST_DIRS: &[&str] = &["tests", "benches", "bench", "examples", "xtask"];
 
 /// Words that mark a directory or file as test, fuzz or benchmark support:
@@ -116,6 +136,7 @@ const TEST_WORDS: &[&str] = &[
     "test",
     "tests",
     "testing",
+    "testbench",
     "kat",
     "kats",
     "fuzz",
