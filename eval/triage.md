@@ -904,6 +904,27 @@ TP, which is what hardening should look like. And the finding class is still noi
 names, recognise `[redacted]`, widen the CA063 hash list, and so on) are untested and would again be written
 against this sample.
 
+## After 0.6.0: CA021 and CA063
+
+Round 8 found CA021 right 2 times in 10, with the same causes as round 7 (3 of 4 then, 4 of 8 now were public
+`tags`). Two small structural changes, made after reading those rows, so they are in-sample:
+
+- **CA021 no longer treats a plural `tags` as evidence of a MAC.** A MAC is one value; `tags` is a list of
+  labels (routing tags, replica-set tags, HTML tags). And when both sides carry the same generic name
+  (`a.tag == b.tag`, `a.material_digest == b.material_digest`) the comparison is two values of one kind being
+  checked for equality, not a presented tag against a computed one: low instead of medium. `tag` against
+  `received_tag` stays medium, and any comparison with a `.finalize()` or `.digest()` result is unchanged.
+- **CA063's "public function named after the hash" now counts the family** (`sha`, `sha1`, `sha2`, `sha3`,
+  `md2`, `blake2`, `ripemd`), so `compute_sha2_auth_response` is low like its SHA-1 sibling.
+
+On the round 8 crates, old build against new: 8 findings change and nothing appears or rises. Three CA021 findings
+disappear (nostr's event-tag comparison, two sozu routing-tag comparisons), two drop to low (sozu's certificate
+digest, yubikey's TLV `tag`), and three CA063 drop to low (warpgate's MySQL scramble). All 8 had been labelled
+false positives in round 8. The CA021 true positive (nostr's NIP-44 HMAC) and true-but-hardening row are
+unchanged. Three CA021 false positives remain, all in warpgate's vendored picky code (public digests compared
+with a digest of public content). A change written against the rows it removes says nothing about new crates;
+round 9 is the test.
+
 ## Second labeller on round 5
 
 A second, independent labeller labelled the same 52 round 5 findings without seeing the first labels
