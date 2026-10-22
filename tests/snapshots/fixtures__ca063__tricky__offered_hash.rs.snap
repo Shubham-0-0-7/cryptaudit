@@ -5,3 +5,4 @@ expression: snap
 5:9 CA063 [high/low] `password` is hashed with MD5: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it
 12:13 CA063 [high/medium] `password` is hashed with SHA256: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it
 17:13 CA063 [high/medium] `password` is hashed with SHA256: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it
+23:7 CA063 [high/low] `password` is hashed with SHA256: a fast hash lets an attacker who gets the hashes try billions of guesses per second, and nothing here salts it

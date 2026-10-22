@@ -16,3 +16,11 @@ fn store(password: &str) -> Vec<u8> {
 pub fn save_password(password: &str) -> Vec<u8> {
     Sha256::digest(password.as_bytes()).to_vec() // expect: CA063 medium
 }
+
+// The family name is enough: the MySQL `caching_sha2_password` scramble. Low.
+pub fn compute_sha2_auth_response(password: &[u8], nonce: &[u8]) -> Vec<u8> {
+    let mut h = Sha256::new();
+    h.update(password); // expect: CA063 low
+    h.update(nonce);
+    h.finalize().to_vec()
+}

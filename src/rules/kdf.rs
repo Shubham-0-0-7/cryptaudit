@@ -524,10 +524,15 @@ impl<'ast> Visit<'ast> for Visitor<'_> {
 /// that offers that scheme to callers, as opposed to code that picked it.
 fn offers_hash(vis: &syn::Visibility, name: &str) -> bool {
     matches!(vis, syn::Visibility::Public(_))
-        && name
-            .to_lowercase()
-            .split('_')
-            .any(|part| hash_type(part).is_some())
+        && name.to_lowercase().split('_').any(|part| {
+            // The family counts, not just the full name: `sha2` is not an algorithm
+            // in the list above, but `compute_sha2_auth_response` is named after it.
+            hash_type(part).is_some()
+                || matches!(
+                    part,
+                    "sha" | "sha1" | "sha2" | "sha3" | "md2" | "blake2" | "ripemd"
+                )
+        })
 }
 
 /// `Sha256::new()`, `Sha256::default()`, `Sha256::new_with_prefix(..)`, with any
