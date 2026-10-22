@@ -184,7 +184,8 @@ Evaluation on real crates, with every finding labelled true or false positive, i
 - [x] Structural fixes after round 7: a verification switch that a caller sets, and a library offering the primitive, are low instead of high; hardening reports are listed apart from findings and do not fail the exit status ([eval/triage.md](eval/triage.md); in-sample, so not a precision figure)
 - [x] An eighth blind round on unseen crates: findings 42% strict (10/24) and hardening 70% (23/33), five distinct real problems found (a database client that accepts any TLS certificate, an HMAC compared with `!=`, passwords stored as an unsalted SHA-256), but one crate supplied 46% of the sample and CA021 was still 2 of 10 ([eval/triage.md](eval/triage.md))
 - [x] Release 0.6.0: the README claim is the round 8 class-split numbers, measured on the build that was released
-- [x] After 0.6.0: CA021 ignores a plural `tags` and the same name on both sides, and CA063 recognises the hash family (`sha2`) in a public function name (in-sample, on the round 8 crates; to be measured by round 9)
+- [x] Release 0.6.1: CA021 ignores a plural `tags` and the same name on both sides, and CA063 recognises the hash family (`sha2`) in a public function name (in-sample, on the round 8 crates; to be measured by round 9)
+  The accuracy figures above were measured on 0.6.0; 0.6.1 differs only by these two changes, which no blind round has measured yet
 - [ ] A ninth blind round on unseen crates with those changes
 
 ## Authors
