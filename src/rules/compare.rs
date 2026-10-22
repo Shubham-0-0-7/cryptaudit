@@ -35,7 +35,10 @@ Confidence:
   high    one side is the output of `.finalize()`, `.digest()` or similar
   medium  both sides are named like MACs (`derived_mac`, `stored_hmac`), or
           one side is named `mac`/`hmac`
-  low     only a generic name such as `tag` or `digest` on one side
+  low     only a generic name such as `tag` or `digest`; two such names are
+          medium only if they differ (`tag` against `received_tag`: a computed
+          value against a presented one), and `self.tag == other.tag` is low.
+          A plural `tags` is a list of labels and is not considered
 A second shape is a one-time code: a value produced by `generate`, `compute`
 or `calculate` compared with a parameter named `token`, `code`, `otp` or
 `signature`. That is medium confidence, and it needs both halves.
@@ -163,8 +166,9 @@ fn name_evidence(name: &str) -> Option<Evidence> {
     let has = |list: &[&str]| ws.iter().any(|w| list.contains(&w.as_str()));
     if has(&["mac", "hmac", "cmac", "poly1305", "ghash"]) {
         Some(Evidence::Strong)
-    } else if has(&["tag", "tags", "digest"]) && !has(&["key"]) {
-        // `key_tag` is a DNSSEC identifier, not an authentication tag.
+    } else if has(&["tag", "digest"]) && !has(&["key"]) {
+        // `key_tag` is a DNSSEC identifier, not an authentication tag. A plural
+        // `tags` is a list of labels (HTML, replica-set, routing tags), never one MAC.
         Some(Evidence::Weak)
     } else {
         None
@@ -324,9 +328,30 @@ fn compare_confidence(a: &Expr, b: &Expr, env: &Env) -> Option<Confidence> {
         Evidence::Api => Confidence::High,
         Evidence::Strong if both => Confidence::High,
         Evidence::Strong => Confidence::Medium,
-        Evidence::Weak if both => Confidence::Medium,
+        // The same generic name on both sides (`self.tag == other.tag`) is two values
+        // of one kind being compared for equality, not a presented tag against a
+        // computed one.
+        Evidence::Weak if both && terminal_name(a) != terminal_name(b) => Confidence::Medium,
         Evidence::Weak => Confidence::Low,
     })
+}
+
+/// The last name in a field access or path: `tag` in `self.tag`, `received` in `received`.
+fn terminal_name(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::Reference(e) => terminal_name(&e.expr),
+        Expr::Paren(e) => terminal_name(&e.expr),
+        Expr::Unary(e) => terminal_name(&e.expr),
+        Expr::MethodCall(c) if PASS_THROUGH.contains(&c.method.to_string().as_str()) => {
+            terminal_name(&c.receiver)
+        }
+        Expr::Field(f) => match &f.member {
+            syn::Member::Named(n) => Some(n.to_string()),
+            syn::Member::Unnamed(_) => None,
+        },
+        Expr::Path(p) => p.path.get_ident().map(ToString::to_string),
+        _ => None,
+    }
 }
 
 /// A code worked out locally compared with one the user sent.
