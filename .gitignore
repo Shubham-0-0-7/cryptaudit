@@ -1,2 +1,6 @@
 /target
 /eval/repos
+
+# kept local until disclosures are resolved
+eval/
+paper/
