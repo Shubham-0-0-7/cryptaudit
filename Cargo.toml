@@ -10,6 +10,7 @@ rust-version = "1.85"
 repository = "https://github.com/Shubham-0-0-7/cryptaudit"
 keywords = ["cryptography", "security", "static-analysis", "audit", "lint"]
 categories = ["development-tools::cargo-plugins", "cryptography"]
+exclude = ["paper/", "eval/"]
 
 [lib]
 path = "src/lib.rs"
